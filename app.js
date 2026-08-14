@@ -10,16 +10,17 @@ const firebaseConfig = {
     appId: "1:257401448840:web:397be7fdd279d76c0c323d"
 };
 
-// 🔒 SET YOUR GMAIL ADDRESS HERE
+// 🔒 RESTRICTED TO YOUR GMAIL ADDRESS
 const MY_GMAIL = "jalal.hameed@uobaghdad.edu.iq"; 
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Global Cache
+// Global State
 let globalStudents = [];
 let globalCourses = [];
+let activeTab = 'attendance';
 
 // DOM Elements
 const loginContainer = document.getElementById('login-container');
@@ -29,14 +30,21 @@ const logoutBtn = document.getElementById('logout-btn');
 const accessDeniedMsg = document.getElementById('access-denied');
 const userInfo = document.getElementById('user-info');
 
-// Form Elements
+// Inputs & Controls
 const studentForm = document.getElementById('student-form');
 const courseForm = document.getElementById('course-form');
 const attendanceCourseSelect = document.getElementById('attendance-course-select');
 const gradeStudentSelect = document.getElementById('grade-student-select');
 const attendanceDate = document.getElementById('attendance-date');
+const globalSearch = document.getElementById('global-search');
 
-// Set today's date in date picker
+// Stat Elements
+const statStudents = document.getElementById('stat-total-students');
+const statCourses = document.getElementById('stat-total-courses');
+const statSchoolAvg = document.getElementById('stat-school-avg');
+const statAttendanceRate = document.getElementById('stat-attendance-rate');
+
+// Initialize Date Picker
 attendanceDate.value = new Date().toISOString().split('T')[0];
 
 // -------------------------------------------------------------
@@ -55,7 +63,7 @@ auth.onAuthStateChanged(user => {
             accessDeniedMsg.style.display = 'none';
             loginContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
-            userInfo.textContent = `Database Admin: ${user.email}`;
+            userInfo.textContent = `Authorized Admin: ${user.email}`;
             
             initDatabaseListeners();
         } else {
@@ -69,6 +77,7 @@ auth.onAuthStateChanged(user => {
 });
 
 window.switchTab = (tab) => {
+    activeTab = tab;
     const attSys = document.getElementById('system-attendance');
     const grdSys = document.getElementById('system-grades');
     const btnAtt = document.getElementById('tab-btn-attendance');
@@ -87,11 +96,16 @@ window.switchTab = (tab) => {
     }
 };
 
+window.triggerGlobalSearch = () => {
+    renderAttendanceTable();
+    renderStudentGradeCard();
+};
+
 // -------------------------------------------------------------
-// 3. DATABASE LISTENERS
+// 3. FIRESTORE DATABASE LISTENERS & ANALYTICS
 // -------------------------------------------------------------
 function initDatabaseListeners() {
-    // Listen to Students
+    // Synchronize Students Collection
     db.collection('students').onSnapshot(snapshot => {
         globalStudents = [];
         gradeStudentSelect.innerHTML = '';
@@ -106,11 +120,13 @@ function initDatabaseListeners() {
             gradeStudentSelect.appendChild(option);
         });
 
+        statStudents.textContent = globalStudents.length;
+        computeGlobalAnalytics();
         renderAttendanceTable();
         renderStudentGradeCard();
     });
 
-    // Listen to Courses
+    // Synchronize Courses Collection
     db.collection('courses').onSnapshot(snapshot => {
         globalCourses = [];
         attendanceCourseSelect.innerHTML = '';
@@ -125,8 +141,41 @@ function initDatabaseListeners() {
             attendanceCourseSelect.appendChild(option);
         });
 
+        statCourses.textContent = globalCourses.length;
         renderAttendanceTable();
         renderStudentGradeCard();
+    });
+}
+
+function computeGlobalAnalytics() {
+    // Global Average Grade Calculation
+    db.collection('grades').get().then(snapshot => {
+        if (snapshot.empty) {
+            statSchoolAvg.textContent = "--%";
+            return;
+        }
+        let total = 0, count = 0;
+        snapshot.forEach(doc => {
+            total += Number(doc.data().score || 0);
+            count++;
+        });
+        const avg = count > 0 ? (total / count).toFixed(1) : 0;
+        statSchoolAvg.textContent = `${avg}%`;
+    });
+
+    // Today's Attendance Metric
+    const todayStr = new Date().toISOString().split('T')[0];
+    db.collection('attendance').where('date', '==', todayStr).get().then(snapshot => {
+        if (snapshot.empty || globalStudents.length === 0) {
+            statAttendanceRate.textContent = "--%";
+            return;
+        }
+        let presentCount = 0;
+        snapshot.forEach(doc => {
+            if (doc.data().present) presentCount++;
+        });
+        const rate = ((presentCount / globalStudents.length) * 100).toFixed(0);
+        statAttendanceRate.textContent = `${rate}%`;
     });
 }
 
@@ -136,6 +185,7 @@ function initDatabaseListeners() {
 window.renderAttendanceTable = () => {
     const courseId = attendanceCourseSelect.value;
     const date = attendanceDate.value;
+    const filter = globalSearch.value.toLowerCase().trim();
     const tbody = document.getElementById('attendance-table-body');
     const summary = document.getElementById('attendance-summary');
     tbody.innerHTML = '';
@@ -160,18 +210,23 @@ window.renderAttendanceTable = () => {
                 const isPresent = record ? record.present : false;
                 if (isPresent) presentCount++;
 
+                // Search Filter
+                if (filter && !student.name.toLowerCase().includes(filter) && !student.studentId.toLowerCase().includes(filter)) {
+                    return;
+                }
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${student.studentId}</td>
+                    <td><span class="code-tag">${student.studentId}</span></td>
                     <td><strong>${student.name}</strong></td>
                     <td>
                         <button class="btn-status ${isPresent ? 'present' : 'absent'}" 
                             onclick="setAttendance('${courseId}', '${date}', '${student.id}', ${!isPresent}, '${record ? record.docId : ''}')">
-                            ${isPresent ? 'Present' : 'Absent'}
+                            ${isPresent ? '● Present' : '○ Absent'}
                         </button>
                     </td>
                     <td>
-                        <button class="btn-delete" onclick="deleteStudent('${student.id}')">Delete Student</button>
+                        <button class="btn-delete" onclick="deleteStudent('${student.id}')">Remove</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -183,9 +238,15 @@ window.renderAttendanceTable = () => {
 
 window.setAttendance = (courseId, date, studentId, status, docId) => {
     if (docId) {
-        db.collection('attendance').doc(docId).update({ present: status }).then(() => renderAttendanceTable());
+        db.collection('attendance').doc(docId).update({ present: status }).then(() => {
+            renderAttendanceTable();
+            computeGlobalAnalytics();
+        });
     } else {
-        db.collection('attendance').add({ courseId, date, studentId, present: status }).then(() => renderAttendanceTable());
+        db.collection('attendance').add({ courseId, date, studentId, present: status }).then(() => {
+            renderAttendanceTable();
+            computeGlobalAnalytics();
+        });
     }
 };
 
@@ -194,6 +255,7 @@ window.setAttendance = (courseId, date, studentId, status, docId) => {
 // -------------------------------------------------------------
 window.renderStudentGradeCard = () => {
     const studentId = gradeStudentSelect.value;
+    const filter = globalSearch.value.toLowerCase().trim();
     const tbody = document.getElementById('grade-table-body');
     const gpaBadge = document.getElementById('overall-gpa');
     tbody.innerHTML = '';
@@ -219,19 +281,24 @@ window.renderStudentGradeCard = () => {
                 totalScore += score;
                 courseCount++;
 
+                // Search Filter
+                if (filter && !course.name.toLowerCase().includes(filter) && !course.courseId.toLowerCase().includes(filter)) {
+                    return;
+                }
+
                 const letter = getLetterGrade(score);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${course.courseId}</strong></td>
-                    <td>${course.name}</td>
+                    <td><span class="code-tag">${course.courseId}</span></td>
+                    <td><strong>${course.name}</strong></td>
                     <td>
                         <input type="number" min="0" max="100" class="grade-input" value="${score}" 
                             onchange="saveGrade('${studentId}', '${course.id}', this.value, '${gradeEntry ? gradeEntry.docId : ''}')"> %
                     </td>
                     <td><span class="letter-badge grade-${letter}">${letter}</span></td>
                     <td>
-                        <button class="btn-delete" onclick="deleteCourse('${course.id}')">Delete Course</button>
+                        <button class="btn-delete" onclick="deleteCourse('${course.id}')">Remove</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -245,9 +312,15 @@ window.renderStudentGradeCard = () => {
 window.saveGrade = (studentId, courseId, score, docId) => {
     const numScore = Number(score);
     if (docId) {
-        db.collection('grades').doc(docId).update({ score: numScore }).then(() => renderStudentGradeCard());
+        db.collection('grades').doc(docId).update({ score: numScore }).then(() => {
+            renderStudentGradeCard();
+            computeGlobalAnalytics();
+        });
     } else {
-        db.collection('grades').add({ studentId, courseId, score: numScore }).then(() => renderStudentGradeCard());
+        db.collection('grades').add({ studentId, courseId, score: numScore }).then(() => {
+            renderStudentGradeCard();
+            computeGlobalAnalytics();
+        });
     }
 };
 
@@ -260,7 +333,41 @@ function getLetterGrade(s) {
 }
 
 // -------------------------------------------------------------
-// 6. ADD / DELETE HANDLERS
+// 6. CSV DATA EXPORT
+// -------------------------------------------------------------
+window.exportActiveTableToCSV = () => {
+    const tableId = activeTab === 'attendance' ? 'attendance-table' : 'grades-table';
+    const filename = `AI_Club_${activeTab}_export_${new Date().toISOString().split('T')[0]}.csv`;
+    const table = document.getElementById(tableId);
+
+    let csv = [];
+    for (let i = 0; i < table.rows.length; i++) {
+        let row = [];
+        let cols = table.rows[i].querySelectorAll("td, th");
+        
+        for (let j = 0; j < cols.length - 1; j++) {
+            let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
+            const input = cols[j].querySelector('input');
+            if (input) text = input.value;
+            
+            text = text.replace(/"/g, '""');
+            row.push('"' + text + '"');
+        }
+        csv.push(row.join(","));
+    }
+
+    const csvBlob = new Blob([csv.join("\n")], { type: "text/csv" });
+    const downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvBlob);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+};
+
+// -------------------------------------------------------------
+// 7. RECORD ADD / DELETE HANDLERS
 // -------------------------------------------------------------
 studentForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -281,9 +388,13 @@ courseForm.addEventListener('submit', (e) => {
 });
 
 window.deleteStudent = (id) => {
-    if (confirm("Remove student from database?")) db.collection('students').doc(id).delete();
+    if (confirm("Delete student record from Big Data AI database?")) {
+        db.collection('students').doc(id).delete();
+    }
 };
 
 window.deleteCourse = (id) => {
-    if (confirm("Remove course from database?")) db.collection('courses').doc(id).delete();
+    if (confirm("Delete course module from database?")) {
+        db.collection('courses').doc(id).delete();
+    }
 };
