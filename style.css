@@ -1,22 +1,10 @@
 /* =============================================================
-   GLOBAL APTOS NARROW FONT CONFIGURATION
+   GLOBAL FONTS (PLUS JAKARTA SANS & INTER)
    ============================================================= */
-@font-face {
-    font-family: 'Aptos Narrow';
-    src: local('Aptos Narrow'), local('AptosNarrow');
-    font-weight: 400;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Aptos Narrow';
-    src: local('Aptos Narrow Bold'), local('AptosNarrow-Bold');
-    font-weight: 700;
-    font-style: normal;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after, body, input, button, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6 {
-    font-family: 'Aptos Narrow', 'Aptos', 'Arial Narrow', sans-serif !important;
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 :root {
@@ -107,6 +95,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 600;
 }
 
 .nav-btn.active, .nav-btn:hover {
@@ -135,6 +124,7 @@ body {
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
+    font-weight: 600;
 }
 
 .btn-delete {
@@ -154,6 +144,7 @@ body {
     padding: 8px 14px;
     border-radius: 6px;
     cursor: pointer;
+    font-weight: 600;
 }
 
 .container { padding: 24px 32px; }
@@ -180,6 +171,7 @@ form input, form select, .filter-bar select {
 .filter-bar { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 16px; }
 .filter-group { flex-grow: 1; }
 
+/* Sticky Left Columns for Wide Tables (16-48 sessions) */
 .excel-scroll-container { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border-color); border-radius: 8px; }
 .height-small { max-height: 250px; overflow-y: auto; }
 
