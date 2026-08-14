@@ -1,6 +1,6 @@
-// -------------------------------------------------------------
+// =============================================================
 // 1. CONFIGURATION & AUTHORIZATION
-// -------------------------------------------------------------
+// =============================================================
 const ADMIN_EMAIL = "jalal.hameed@uobaghdad.edu.iq";
 
 const firebaseConfig = {
@@ -29,9 +29,9 @@ let globalStudents = [];
 let globalCourses = [];
 let currentPage = 'admin';
 
-// -------------------------------------------------------------
+// =============================================================
 // 2. AUTHENTICATION (STRICT GOOGLE AUTH)
-// -------------------------------------------------------------
+// =============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container');
     const dashboardContainer = document.getElementById('dashboard-container');
@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const accessDeniedMsg = document.getElementById('access-denied');
     const userInfo = document.getElementById('user-info');
 
+    // Warning for running via local file explorer
     if (window.location.protocol === 'file:') {
         if (accessDeniedMsg) {
             accessDeniedMsg.style.display = 'block';
@@ -94,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Add Course Form Listener
     const courseForm = document.getElementById('course-form');
     if (courseForm) {
         courseForm.addEventListener('submit', (e) => {
@@ -108,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Enroll Student Form Listener
     const studentForm = document.getElementById('student-form');
     if (studentForm) {
         studentForm.addEventListener('submit', (e) => {
@@ -129,9 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// -------------------------------------------------------------
-// 3. PAGE SWITCHING
-// -------------------------------------------------------------
+// =============================================================
+// 3. PAGE NAVIGATION
+// =============================================================
 window.switchPage = (page) => {
     currentPage = page;
 
@@ -149,9 +152,9 @@ window.switchPage = (page) => {
     if (page === 'admin') renderAdminLists();
 };
 
-// -------------------------------------------------------------
-// 4. DATABASE SYNC
-// -------------------------------------------------------------
+// =============================================================
+// 4. DATABASE REALTIME SYNC
+// =============================================================
 function initDatabaseListeners() {
     if (!db) return;
 
@@ -198,9 +201,9 @@ function updateDropdowns() {
     });
 }
 
-// -------------------------------------------------------------
+// =============================================================
 // 5. ADMIN & ROSTER MANAGEMENT
-// -------------------------------------------------------------
+// =============================================================
 function renderAdminLists() {
     const coursesBody = document.getElementById('courses-admin-list');
     const studentsBody = document.getElementById('students-admin-list');
@@ -236,9 +239,9 @@ function renderAdminLists() {
     }
 }
 
-// -------------------------------------------------------------
-// 6. ATTENDANCE MANAGEMENT
-// -------------------------------------------------------------
+// =============================================================
+// 6. ATTENDANCE MATRIX (UNLIMITED SESSIONS: LEC, LAB, TUT)
+// =============================================================
 window.renderAttendanceGrid = () => {
     const attSelect = document.getElementById('attendance-course-select');
     const thead = document.getElementById('attendance-table-head');
@@ -265,9 +268,11 @@ window.renderAttendanceGrid = () => {
 
             snapshot.forEach(doc => {
                 const d = doc.data();
-                dateSet.add(d.date);
-                if (!map[d.date]) map[d.date] = {};
-                map[d.date][d.studentId] = { docId: doc.id, present: d.present };
+                if (d.date) {
+                    dateSet.add(d.date);
+                    if (!map[d.date]) map[d.date] = {};
+                    map[d.date][d.studentId] = { docId: doc.id, present: d.present };
+                }
             });
 
             const sortedDates = Array.from(dateSet).sort();
@@ -346,27 +351,29 @@ window.toggleFirebaseAttendance = (courseId, date, studentId, status, docId) => 
 };
 
 window.addNewAttendanceDate = () => {
-    const d = prompt("Enter Session Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-    if (!d) return;
+    const defaultLabel = new Date().toISOString().split('T')[0];
+    const sessionLabel = prompt("Enter Session Tag or Date (e.g., '2026-08-14', 'W1-Lec', 'W1-Lab', 'W1-Tut'):", defaultLabel);
+    if (!sessionLabel) return;
 
     if (db) {
         const attSelect = document.getElementById('attendance-course-select');
         const courseId = attSelect ? attSelect.value : '';
         if (!courseId) {
-            alert("Please select a course first.");
+            alert("Please select a course module first.");
             return;
         }
         db.collection('attendance').add({
-            courseId, date: d,
+            courseId,
+            date: sessionLabel.trim(),
             studentId: 'dummy_init',
             present: false
         }).then(() => renderAttendanceGrid());
     }
 };
 
-// -------------------------------------------------------------
-// 7. GRADEBOOK MANAGEMENT
-// -------------------------------------------------------------
+// =============================================================
+// 7. GRADEBOOK GRID MANAGEMENT
+// =============================================================
 window.renderGradebookGrid = () => {
     const gradeSelect = document.getElementById('grade-course-select');
     const tbody = document.getElementById('grade-table-body');
@@ -398,7 +405,8 @@ window.renderGradebookGrid = () => {
                     midterm: Number(entry.midterm || 0), final: Number(entry.final || 0)
                 };
                 const total = g.q1 + g.q2 + g.a1 + g.a2 + g.project + g.report + g.midterm + g.final;
-                totalSum += total; count++;
+                totalSum += total; 
+                count++;
                 appendGradeRow(tbody, student, idx + 1, courseId, g, total, entry.docId);
             });
             const avg = count > 0 ? (totalSum / count).toFixed(1) : "0.0";
@@ -438,18 +446,18 @@ window.updateGrade = (studentId, courseId, field, val, docId) => {
     }
 };
 
-// -------------------------------------------------------------
-// 8. DELETION & CSV EXPORT
-// -------------------------------------------------------------
+// =============================================================
+// 8. DELETIONS & CSV EXPORT
+// =============================================================
 window.deleteCourse = (id) => {
-    if (!confirm("Remove this course module?")) return;
+    if (!confirm("Are you sure you want to delete this course module?")) return;
     if (db) {
         db.collection('courses').doc(id).delete();
     }
 };
 
 window.deleteStudent = (id) => {
-    if (!confirm("Remove this student entry?")) return;
+    if (!confirm("Are you sure you want to remove this student?")) return;
     if (db) {
         db.collection('students').doc(id).delete();
     }
