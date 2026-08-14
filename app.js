@@ -21,80 +21,52 @@ if (typeof firebase !== 'undefined') {
         auth = firebase.auth();
         db = firebase.firestore();
     } catch (e) {
-        console.warn("Firebase config error:", e);
+        console.warn("Firebase initialization warning:", e);
     }
 }
 
-// Global System State
-let isDemoMode = false;
 let globalStudents = [];
 let globalCourses = [];
 let currentPage = 'admin';
 
-// Demo Memory Store
-let demoCourses = [
-    { id: "c1", courseId: "BIGDATA-101", name: "Big Data Systems" },
-    { id: "c2", courseId: "AI-402", name: "Deep Learning" }
-];
-
-let demoStudents = [
-    { id: "s1", studentId: "AI-2026-01", name: "Ahmadi Hassan", courseId: "c1" },
-    { id: "s2", studentId: "AI-2026-02", name: "Zahra Ali", courseId: "c1" },
-    { id: "s3", studentId: "AI-2026-03", name: "Omar Mustafa", courseId: "c2" }
-];
-
-let demoGrades = {
-    "c1_s1": { q1: 5, q2: 4, a1: 5, a2: 5, project: 9, report: 10, midterm: 9, final: 45 },
-    "c1_s2": { q1: 4, q2: 3, a1: 4, a2: 4, project: 8, report: 8, midterm: 7, final: 38 }
-};
-
-let demoAttendanceDates = ["2026-02-01", "2026-02-08", "2026-02-15"];
-let demoAttendance = {
-    "2026-02-01_s1": true, "2026-02-01_s2": true,
-    "2026-02-08_s1": true, "2026-02-08_s2": false,
-    "2026-02-15_s1": true, "2026-02-15_s2": true
-};
-
 // -------------------------------------------------------------
-// 2. AUTHENTICATION & INITIALIZATION
+// 2. AUTHENTICATION (STRICT GOOGLE AUTH)
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container');
     const dashboardContainer = document.getElementById('dashboard-container');
     const googleLoginBtn = document.getElementById('google-login-btn');
-    const demoLoginBtn = document.getElementById('demo-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const accessDeniedMsg = document.getElementById('access-denied');
     const userInfo = document.getElementById('user-info');
+
+    if (window.location.protocol === 'file:') {
+        if (accessDeniedMsg) {
+            accessDeniedMsg.style.display = 'block';
+            accessDeniedMsg.innerHTML = `⚠️ <strong>Local File Protocol Detected</strong><br>Google Sign-In will not open on <code>file://</code>. Please run this page using a local web server (e.g., VS Code Live Server).`;
+        }
+    }
 
     if (googleLoginBtn) {
         googleLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (!auth) {
-                enableDemoMode();
+                alert("Firebase Auth SDK not initialized.");
                 return;
             }
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => {
                 if (accessDeniedMsg) {
                     accessDeniedMsg.style.display = 'block';
-                    accessDeniedMsg.innerHTML = `⚠️ Sign-In Error: ${error.message}`;
+                    accessDeniedMsg.innerHTML = `⚠️ Auth Error: ${error.message}`;
                 }
             });
         });
     }
 
-    if (demoLoginBtn) {
-        demoLoginBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            enableDemoMode();
-        });
-    }
-
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            if (isDemoMode) location.reload();
-            else if (auth) auth.signOut().then(() => location.reload());
+            if (auth) auth.signOut().then(() => location.reload());
         });
     }
 
@@ -103,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user) {
                 const userEmail = (user.email || "").toLowerCase().trim();
                 if (userEmail === ADMIN_EMAIL.toLowerCase().trim()) {
-                    isDemoMode = false;
                     if (accessDeniedMsg) accessDeniedMsg.style.display = 'none';
                     if (loginContainer) loginContainer.style.display = 'none';
                     if (dashboardContainer) dashboardContainer.style.display = 'block';
@@ -116,14 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         accessDeniedMsg.innerHTML = `⛔ <strong>Access Denied (${user.email})</strong><br>Only <code>${ADMIN_EMAIL}</code> has Admin privileges.`;
                     }
                 }
-            } else if (!isDemoMode) {
+            } else {
                 if (loginContainer) loginContainer.style.display = 'flex';
                 if (dashboardContainer) dashboardContainer.style.display = 'none';
             }
         });
     }
 
-    // Form Submissions
     const courseForm = document.getElementById('course-form');
     if (courseForm) {
         courseForm.addEventListener('submit', (e) => {
@@ -131,10 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const courseId = document.getElementById('course-id').value.trim();
             const name = document.getElementById('course-name').value.trim();
 
-            if (isDemoMode) {
-                demoCourses.push({ id: 'c' + (demoCourses.length + 1), courseId, name });
-                loadDemoData();
-            } else if (db) {
+            if (db) {
                 db.collection('courses').add({ courseId, name });
             }
             courseForm.reset();
@@ -149,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('student-name').value.trim();
             const courseId = document.getElementById('student-course-assign').value;
 
-            if (isDemoMode) {
-                demoStudents.push({ id: 's' + (demoStudents.length + 1), studentId, name, courseId });
-                loadDemoData();
-            } else if (db) {
+            if (!courseId) {
+                alert("Please select a course to enroll the student into.");
+                return;
+            }
+
+            if (db) {
                 db.collection('students').add({ studentId, name, courseId });
             }
             studentForm.reset();
@@ -160,16 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function enableDemoMode() {
-    isDemoMode = true;
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('dashboard-container').style.display = 'block';
-    document.getElementById('user-info').textContent = "Mode: Demo Admin Access";
-    loadDemoData();
-}
-
 // -------------------------------------------------------------
-// 3. PAGE NAVIGATION ENGINE
+// 3. PAGE SWITCHING
 // -------------------------------------------------------------
 window.switchPage = (page) => {
     currentPage = page;
@@ -189,14 +150,8 @@ window.switchPage = (page) => {
 };
 
 // -------------------------------------------------------------
-// 4. DATA ENGINE & DATABASE SYNC
+// 4. DATABASE SYNC
 // -------------------------------------------------------------
-function loadDemoData() {
-    globalStudents = [...demoStudents];
-    globalCourses = [...demoCourses];
-    refreshAllViews();
-}
-
 function initDatabaseListeners() {
     if (!db) return;
 
@@ -244,7 +199,7 @@ function updateDropdowns() {
 }
 
 // -------------------------------------------------------------
-// 5. PAGE 1: ADMIN & ROSTER MANAGEMENT
+// 5. ADMIN & ROSTER MANAGEMENT
 // -------------------------------------------------------------
 function renderAdminLists() {
     const coursesBody = document.getElementById('courses-admin-list');
@@ -252,9 +207,10 @@ function renderAdminLists() {
 
     if (coursesBody) {
         coursesBody.innerHTML = '';
-        globalCourses.forEach(c => {
+        globalCourses.forEach((c, idx) => {
             coursesBody.innerHTML += `
                 <tr>
+                    <td><strong>${idx + 1}</strong></td>
                     <td><span class="code-tag">${c.courseId}</span></td>
                     <td><strong>${c.name}</strong></td>
                     <td><button class="btn-delete" onclick="deleteCourse('${c.id}')">✕ Delete</button></td>
@@ -264,12 +220,16 @@ function renderAdminLists() {
 
     if (studentsBody) {
         studentsBody.innerHTML = '';
-        globalStudents.forEach(s => {
-            coursesBody;
+        globalStudents.forEach((s, idx) => {
+            const courseObj = globalCourses.find(c => c.id === s.courseId);
+            const courseLabel = courseObj ? `${courseObj.courseId} - ${courseObj.name}` : 'Unassigned';
+
             studentsBody.innerHTML += `
                 <tr>
+                    <td><strong>${idx + 1}</strong></td>
                     <td><span class="code-tag">${s.studentId}</span></td>
                     <td><strong>${s.name}</strong></td>
+                    <td><small>${courseLabel}</small></td>
                     <td><button class="btn-delete" onclick="deleteStudent('${s.id}')">✕ Remove</button></td>
                 </tr>`;
         });
@@ -277,7 +237,7 @@ function renderAdminLists() {
 }
 
 // -------------------------------------------------------------
-// 6. PAGE 2: ATTENDANCE MANAGEMENT
+// 6. ATTENDANCE MANAGEMENT
 // -------------------------------------------------------------
 window.renderAttendanceGrid = () => {
     const attSelect = document.getElementById('attendance-course-select');
@@ -296,53 +256,9 @@ window.renderAttendanceGrid = () => {
         return;
     }
 
-    const courseStudents = globalStudents.filter(s => !s.courseId || s.courseId === courseId);
+    const courseStudents = globalStudents.filter(s => s.courseId === courseId);
 
-    if (isDemoMode) {
-        const dates = demoAttendanceDates;
-        buildAttendanceHeader(thead, dates);
-
-        let overallScoreSum = 0, count = 0;
-
-        courseStudents.forEach(student => {
-            let presentCount = 0;
-            let rowHTML = `<tr>
-                <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
-                <td class="sticky-col-2"><strong>${student.name}</strong></td>`;
-
-            dates.forEach(date => {
-                const key = `${date}_${student.id}`;
-                const present = demoAttendance[key] || false;
-                if (present) presentCount++;
-
-                rowHTML += `
-                    <td>
-                        <button class="btn-grid-status ${present ? 'present' : 'absent'}"
-                            onclick="toggleDemoAttendance('${date}', '${student.id}')">
-                            ${present ? 'P' : 'A'}
-                        </button>
-                    </td>`;
-            });
-
-            const totalSessions = dates.length;
-            const attScore = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
-            overallScoreSum += attScore;
-            count++;
-
-            rowHTML += `
-                <td><strong>${presentCount}</strong></td>
-                <td><strong>${totalSessions}</strong></td>
-                <td><strong class="total-score">${attScore} / 100</strong></td>
-                <td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td>
-            </tr>`;
-
-            tbody.innerHTML += rowHTML;
-        });
-
-        const overallAvg = count > 0 ? Math.round(overallScoreSum / count) : 0;
-        if (summary) summary.textContent = `Course Attendance Score: ${overallAvg} / 100 (${dates.length} Sessions)`;
-
-    } else if (db) {
+    if (db) {
         db.collection('attendance').where('courseId', '==', courseId).get().then(snapshot => {
             const dateSet = new Set();
             const map = {};
@@ -359,9 +275,10 @@ window.renderAttendanceGrid = () => {
 
             let overallScoreSum = 0, count = 0;
 
-            courseStudents.forEach(student => {
+            courseStudents.forEach((student, idx) => {
                 let presentCount = 0;
                 let rowHTML = `<tr>
+                    <td><strong>${idx + 1}</strong></td>
                     <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
                     <td class="sticky-col-2"><strong>${student.name}</strong></td>`;
 
@@ -396,13 +313,14 @@ window.renderAttendanceGrid = () => {
             });
 
             const overallAvg = count > 0 ? Math.round(overallScoreSum / count) : 0;
-            if (summary) summary.textContent = `Course Attendance Score: ${overallAvg} / 100 (${sortedDates.length} Sessions)`;
+            if (summary) summary.textContent = `Course Attendance Score: ${overallAvg} / 100 (${sortedDates.length} Sessions | ${courseStudents.length} Students)`;
         });
     }
 };
 
 function buildAttendanceHeader(thead, dates) {
     let headerHTML = `<tr>
+        <th>#</th>
         <th class="sticky-col">Student ID</th>
         <th class="sticky-col-2">Student Name</th>`;
 
@@ -418,12 +336,6 @@ function buildAttendanceHeader(thead, dates) {
     thead.innerHTML = headerHTML;
 }
 
-window.toggleDemoAttendance = (date, studentId) => {
-    const key = `${date}_${studentId}`;
-    demoAttendance[key] = !demoAttendance[key];
-    renderAttendanceGrid();
-};
-
 window.toggleFirebaseAttendance = (courseId, date, studentId, status, docId) => {
     if (!db) return;
     if (docId) {
@@ -437,22 +349,23 @@ window.addNewAttendanceDate = () => {
     const d = prompt("Enter Session Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
     if (!d) return;
 
-    if (isDemoMode) {
-        if (!demoAttendanceDates.includes(d)) demoAttendanceDates.push(d);
-        renderAttendanceGrid();
-    } else if (db) {
+    if (db) {
         const attSelect = document.getElementById('attendance-course-select');
         const courseId = attSelect ? attSelect.value : '';
+        if (!courseId) {
+            alert("Please select a course first.");
+            return;
+        }
         db.collection('attendance').add({
             courseId, date: d,
-            studentId: globalStudents[0] ? globalStudents[0].id : 'dummy',
-            present: true
+            studentId: 'dummy_init',
+            present: false
         }).then(() => renderAttendanceGrid());
     }
 };
 
 // -------------------------------------------------------------
-// 7. PAGE 3: GRADEBOOK MANAGEMENT (OUT OF 100)
+// 7. GRADEBOOK MANAGEMENT
 // -------------------------------------------------------------
 window.renderGradebookGrid = () => {
     const gradeSelect = document.getElementById('grade-course-select');
@@ -468,26 +381,15 @@ window.renderGradebookGrid = () => {
         return;
     }
 
-    const courseStudents = globalStudents.filter(s => !s.courseId || s.courseId === courseId);
+    const courseStudents = globalStudents.filter(s => s.courseId === courseId);
 
-    if (isDemoMode) {
-        let totalSum = 0, count = 0;
-        courseStudents.forEach(student => {
-            const key = `${courseId}_${student.id}`;
-            const g = demoGrades[key] || { q1:0, q2:0, a1:0, a2:0, project:0, report:0, midterm:0, final:0 };
-            const total = Number(g.q1)+Number(g.q2)+Number(g.a1)+Number(g.a2)+Number(g.project)+Number(g.report)+Number(g.midterm)+Number(g.final);
-            totalSum += total; count++;
-            appendGradeRow(tbody, student, courseId, g, total, null);
-        });
-        const avg = count > 0 ? (totalSum / count).toFixed(1) : "0.0";
-        if (summary) summary.textContent = `Course Average: ${avg} / 100`;
-    } else if (db) {
+    if (db) {
         db.collection('grades').where('courseId', '==', courseId).get().then(snapshot => {
             const gradesMap = {};
             snapshot.forEach(doc => gradesMap[doc.data().studentId] = { docId: doc.id, ...doc.data() });
 
             let totalSum = 0, count = 0;
-            courseStudents.forEach(student => {
+            courseStudents.forEach((student, idx) => {
                 const entry = gradesMap[student.id] || {};
                 const g = {
                     q1: Number(entry.q1 || 0), q2: Number(entry.q2 || 0),
@@ -497,17 +399,18 @@ window.renderGradebookGrid = () => {
                 };
                 const total = g.q1 + g.q2 + g.a1 + g.a2 + g.project + g.report + g.midterm + g.final;
                 totalSum += total; count++;
-                appendGradeRow(tbody, student, courseId, g, total, entry.docId);
+                appendGradeRow(tbody, student, idx + 1, courseId, g, total, entry.docId);
             });
             const avg = count > 0 ? (totalSum / count).toFixed(1) : "0.0";
-            if (summary) summary.textContent = `Course Average: ${avg} / 100`;
+            if (summary) summary.textContent = `Course Average: ${avg} / 100 (${courseStudents.length} Students)`;
         });
     }
 };
 
-function appendGradeRow(tbody, student, courseId, g, total, docId) {
+function appendGradeRow(tbody, student, rowNum, courseId, g, total, docId) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
+        <td><strong>${rowNum}</strong></td>
         <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
         <td class="sticky-col-2"><strong>${student.name}</strong></td>
         <td><input type="number" min="0" max="5" class="cell-input" value="${g.q1}" onchange="updateGrade('${student.id}', '${courseId}', 'q1', this.value, '${docId||''}')"></td>
@@ -526,12 +429,7 @@ function appendGradeRow(tbody, student, courseId, g, total, docId) {
 
 window.updateGrade = (studentId, courseId, field, val, docId) => {
     const num = Number(val);
-    if (isDemoMode) {
-        const key = `${courseId}_${studentId}`;
-        if (!demoGrades[key]) demoGrades[key] = { q1:0, q2:0, a1:0, a2:0, project:0, report:0, midterm:0, final:0 };
-        demoGrades[key][field] = num;
-        renderGradebookGrid();
-    } else if (db) {
+    if (db) {
         if (docId) {
             db.collection('grades').doc(docId).update({ [field]: num }).then(() => renderGradebookGrid());
         } else {
@@ -545,20 +443,14 @@ window.updateGrade = (studentId, courseId, field, val, docId) => {
 // -------------------------------------------------------------
 window.deleteCourse = (id) => {
     if (!confirm("Remove this course module?")) return;
-    if (isDemoMode) {
-        demoCourses = demoCourses.filter(c => c.id !== id);
-        loadDemoData();
-    } else if (db) {
+    if (db) {
         db.collection('courses').doc(id).delete();
     }
 };
 
 window.deleteStudent = (id) => {
     if (!confirm("Remove this student entry?")) return;
-    if (isDemoMode) {
-        demoStudents = demoStudents.filter(s => s.id !== id);
-        loadDemoData();
-    } else if (db) {
+    if (db) {
         db.collection('students').doc(id).delete();
     }
 };
