@@ -15,7 +15,6 @@ const firebaseConfig = {
 let db = null;
 let auth = null;
 
-// Safe Firebase Initialization
 if (typeof firebase !== 'undefined') {
     try {
         firebase.initializeApp(firebaseConfig);
@@ -54,7 +53,8 @@ let demoGrades = {
 let demoAttendanceDates = ["2026-02-01", "2026-02-08", "2026-02-15"];
 let demoAttendance = {
     "2026-02-01_s1": true, "2026-02-01_s2": true, "2026-02-01_s3": false,
-    "2026-02-08_s1": true, "2026-02-08_s2": false, "2026-02-08_s3": true
+    "2026-02-08_s1": true, "2026-02-08_s2": false, "2026-02-08_s3": true,
+    "2026-02-15_s1": true, "2026-02-15_s2": true, "2026-02-15_s3": true
 };
 
 // -------------------------------------------------------------
@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const accessDeniedMsg = document.getElementById('access-denied');
     const userInfo = document.getElementById('user-info');
 
-    // Google Sign-In Click Handler
     if (googleLoginBtn) {
         googleLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -90,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Bypass / Demo Access Click Handler
     if (demoLoginBtn) {
         demoLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -98,7 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Logout Click Handler
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if (isDemoMode) {
@@ -109,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Strict Auth Verification
     if (auth) {
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -117,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetAdmin = ADMIN_EMAIL.toLowerCase().trim();
 
                 if (userEmail === targetAdmin) {
-                    // AUTHORIZED ADMIN
                     isDemoMode = false;
                     if (accessDeniedMsg) accessDeniedMsg.style.display = 'none';
                     if (loginContainer) loginContainer.style.display = 'none';
@@ -125,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (userInfo) userInfo.textContent = `Admin: ${user.email} (College of AI)`;
                     initDatabaseListeners();
                 } else {
-                    // UNAUTHORIZED EMAIL -> DENY ACCESS
                     auth.signOut();
                     if (accessDeniedMsg) {
                         accessDeniedMsg.style.display = 'block';
@@ -139,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Event Listeners
+    // Forms
     const studentForm = document.getElementById('student-form');
     if (studentForm) {
         studentForm.addEventListener('submit', (e) => {
@@ -175,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Switch to offline/demo preview
 function enableDemoMode() {
     isDemoMode = true;
     const loginContainer = document.getElementById('login-container');
@@ -194,20 +187,31 @@ function enableDemoMode() {
 // -------------------------------------------------------------
 window.switchTab = (tab) => {
     activeTab = tab;
-    const gradesSec = document.getElementById('system-grades');
-    const attSec = document.getElementById('system-attendance');
-    const btnGrades = document.getElementById('tab-btn-grades');
-    const btnAtt = document.getElementById('tab-btn-attendance');
+    const sections = {
+        grades: document.getElementById('system-grades'),
+        attendance: document.getElementById('system-attendance'),
+        students: document.getElementById('system-students'),
+        courses: document.getElementById('system-courses')
+    };
 
-    if (gradesSec) gradesSec.style.display = tab === 'grades' ? 'block' : 'none';
-    if (attSec) attSec.style.display = tab === 'attendance' ? 'block' : 'none';
-    if (btnGrades) btnGrades.classList.toggle('active', tab === 'grades');
-    if (btnAtt) btnAtt.classList.toggle('active', tab === 'attendance');
+    const buttons = {
+        grades: document.getElementById('tab-btn-grades'),
+        attendance: document.getElementById('tab-btn-attendance'),
+        students: document.getElementById('tab-btn-students'),
+        courses: document.getElementById('tab-btn-courses')
+    };
+
+    Object.keys(sections).forEach(key => {
+        if (sections[key]) sections[key].style.display = key === tab ? 'block' : 'none';
+        if (buttons[key]) buttons[key].classList.toggle('active', key === tab);
+    });
 };
 
 window.triggerGlobalSearch = () => {
     renderGradebookGrid();
     renderAttendanceGrid();
+    renderStudentsGrid();
+    renderCoursesGrid();
 };
 
 // -------------------------------------------------------------
@@ -219,6 +223,8 @@ function loadDemoData() {
     updateCourseDropdowns();
     renderGradebookGrid();
     renderAttendanceGrid();
+    renderStudentsGrid();
+    renderCoursesGrid();
 }
 
 function initDatabaseListeners() {
@@ -228,6 +234,7 @@ function initDatabaseListeners() {
         snapshot.forEach(doc => globalStudents.push({ id: doc.id, ...doc.data() }));
         renderGradebookGrid();
         renderAttendanceGrid();
+        renderStudentsGrid();
     });
 
     db.collection('courses').onSnapshot(snapshot => {
@@ -236,6 +243,7 @@ function initDatabaseListeners() {
         updateCourseDropdowns();
         renderGradebookGrid();
         renderAttendanceGrid();
+        renderCoursesGrid();
     });
 }
 
@@ -260,13 +268,14 @@ function updateCourseDropdowns() {
 }
 
 // -------------------------------------------------------------
-// 5. GRADEBOOK SPREADSHEET MATRIX
+// 5. GRADEBOOK MATRIX (OUT OF 100)
 // -------------------------------------------------------------
 window.renderGradebookGrid = () => {
     const gradeSelect = document.getElementById('grade-course-select');
     const globalSearch = document.getElementById('global-search');
     const tbody = document.getElementById('grade-table-body');
     const summary = document.getElementById('gradebook-summary');
+    const statSchoolAvg = document.getElementById('stat-school-avg');
 
     if (!gradeSelect || !tbody) return;
     const courseId = gradeSelect.value;
@@ -288,8 +297,9 @@ window.renderGradebookGrid = () => {
             totalSum += total; count++;
             appendGradeRow(tbody, student, courseId, g, total, null);
         });
-        const avg = count > 0 ? (totalSum / count).toFixed(1) : 0;
-        if (summary) summary.textContent = `Course Avg: ${avg} / 100 (${getLetterGrade(avg)})`;
+        const avg = count > 0 ? (totalSum / count).toFixed(1) : "0.0";
+        if (summary) summary.textContent = `Course Average: ${avg} / 100`;
+        if (statSchoolAvg) statSchoolAvg.textContent = `${avg} / 100`;
     } else if (db) {
         db.collection('grades').where('courseId', '==', courseId).get().then(snapshot => {
             const gradesMap = {};
@@ -309,14 +319,14 @@ window.renderGradebookGrid = () => {
                 totalSum += total; count++;
                 appendGradeRow(tbody, student, courseId, g, total, entry.docId);
             });
-            const avg = count > 0 ? (totalSum / count).toFixed(1) : 0;
-            if (summary) summary.textContent = `Course Avg: ${avg} / 100 (${getLetterGrade(avg)})`;
+            const avg = count > 0 ? (totalSum / count).toFixed(1) : "0.0";
+            if (summary) summary.textContent = `Course Average: ${avg} / 100`;
+            if (statSchoolAvg) statSchoolAvg.textContent = `${avg} / 100`;
         });
     }
 };
 
 function appendGradeRow(tbody, student, courseId, g, total, docId) {
-    const letter = getLetterGrade(total);
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
@@ -329,8 +339,7 @@ function appendGradeRow(tbody, student, courseId, g, total, docId) {
         <td><input type="number" min="0" max="10" class="cell-input" value="${g.report}" onchange="updateGrade('${student.id}', '${courseId}', 'report', this.value, '${docId||''}')"></td>
         <td><input type="number" min="0" max="10" class="cell-input" value="${g.midterm}" onchange="updateGrade('${student.id}', '${courseId}', 'midterm', this.value, '${docId||''}')"></td>
         <td><input type="number" min="0" max="50" class="cell-input" value="${g.final}" onchange="updateGrade('${student.id}', '${courseId}', 'final', this.value, '${docId||''}')"></td>
-        <td><strong class="total-score">${total}</strong></td>
-        <td><span class="letter-badge grade-${letter}">${letter}</span></td>
+        <td><strong class="total-score">${total} / 100</strong></td>
         <td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td>
     `;
     tbody.appendChild(tr);
@@ -352,16 +361,8 @@ window.updateGrade = (studentId, courseId, field, val, docId) => {
     }
 };
 
-function getLetterGrade(s) {
-    if (s >= 90) return 'A';
-    if (s >= 80) return 'B';
-    if (s >= 70) return 'C';
-    if (s >= 60) return 'D';
-    return 'F';
-}
-
 // -------------------------------------------------------------
-// 6. ATTENDANCE MATRIX
+// 6. ATTENDANCE MATRIX (OUT OF 100)
 // -------------------------------------------------------------
 window.renderAttendanceGrid = () => {
     const attSelect = document.getElementById('attendance-course-select');
@@ -369,6 +370,7 @@ window.renderAttendanceGrid = () => {
     const thead = document.getElementById('attendance-table-head');
     const tbody = document.getElementById('attendance-table-body');
     const summary = document.getElementById('attendance-summary');
+    const statAttendanceRate = document.getElementById('stat-attendance-rate');
 
     if (!attSelect || !thead || !tbody) return;
     const courseId = attSelect.value;
@@ -386,8 +388,12 @@ window.renderAttendanceGrid = () => {
         const dates = demoAttendanceDates;
         buildAttendanceHeader(thead, dates);
 
+        let overallScoreSum = 0, count = 0;
+
         globalStudents.forEach(student => {
             if (filter && !student.name.toLowerCase().includes(filter) && !student.studentId.toLowerCase().includes(filter)) return;
+
+            let presentCount = 0;
             let rowHTML = `<tr>
                 <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
                 <td class="sticky-col-2"><strong>${student.name}</strong></td>`;
@@ -395,6 +401,8 @@ window.renderAttendanceGrid = () => {
             dates.forEach(date => {
                 const key = `${date}_${student.id}`;
                 const present = demoAttendance[key] || false;
+                if (present) presentCount++;
+
                 rowHTML += `
                     <td>
                         <button class="btn-grid-status ${present ? 'present' : 'absent'}"
@@ -404,11 +412,25 @@ window.renderAttendanceGrid = () => {
                     </td>`;
             });
 
-            rowHTML += `<td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td></tr>`;
+            const totalSessions = dates.length;
+            const attScore = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+            overallScoreSum += attScore;
+            count++;
+
+            rowHTML += `
+                <td><strong>${presentCount}</strong></td>
+                <td><strong>${totalSessions}</strong></td>
+                <td><strong class="total-score">${attScore} / 100</strong></td>
+                <td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td>
+            </tr>`;
+
             tbody.innerHTML += rowHTML;
         });
 
-        if (summary) summary.textContent = `Total Sessions: ${dates.length}`;
+        const overallAvg = count > 0 ? Math.round(overallScoreSum / count) : 0;
+        if (summary) summary.textContent = `Average Attendance Score: ${overallAvg} / 100 (${dates.length} Sessions)`;
+        if (statAttendanceRate) statAttendanceRate.textContent = `${overallAvg} / 100`;
+
     } else if (db) {
         db.collection('attendance').where('courseId', '==', courseId).get().then(snapshot => {
             const dateSet = new Set();
@@ -424,8 +446,12 @@ window.renderAttendanceGrid = () => {
             const sortedDates = Array.from(dateSet).sort();
             buildAttendanceHeader(thead, sortedDates);
 
+            let overallScoreSum = 0, count = 0;
+
             globalStudents.forEach(student => {
                 if (filter && !student.name.toLowerCase().includes(filter) && !student.studentId.toLowerCase().includes(filter)) return;
+
+                let presentCount = 0;
                 let rowHTML = `<tr>
                     <td class="sticky-col"><span class="code-tag">${student.studentId}</span></td>
                     <td class="sticky-col-2"><strong>${student.name}</strong></td>`;
@@ -434,6 +460,7 @@ window.renderAttendanceGrid = () => {
                     const rec = map[date] ? map[date][student.id] : null;
                     const present = rec ? rec.present : false;
                     const docId = rec ? rec.docId : '';
+                    if (present) presentCount++;
 
                     rowHTML += `
                         <td>
@@ -444,19 +471,42 @@ window.renderAttendanceGrid = () => {
                         </td>`;
                 });
 
-                rowHTML += `<td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td></tr>`;
+                const totalSessions = sortedDates.length;
+                const attScore = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+                overallScoreSum += attScore;
+                count++;
+
+                rowHTML += `
+                    <td><strong>${presentCount}</strong></td>
+                    <td><strong>${totalSessions}</strong></td>
+                    <td><strong class="total-score">${attScore} / 100</strong></td>
+                    <td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕</button></td>
+                </tr>`;
+
                 tbody.innerHTML += rowHTML;
             });
 
-            if (summary) summary.textContent = `Total Sessions: ${sortedDates.length}`;
+            const overallAvg = count > 0 ? Math.round(overallScoreSum / count) : 0;
+            if (summary) summary.textContent = `Average Attendance Score: ${overallAvg} / 100 (${sortedDates.length} Sessions)`;
+            if (statAttendanceRate) statAttendanceRate.textContent = `${overallAvg} / 100`;
         });
     }
 };
 
 function buildAttendanceHeader(thead, dates) {
-    let headerHTML = `<tr><th class="sticky-col">Student ID</th><th class="sticky-col-2">Student Name</th>`;
+    let headerHTML = `<tr>
+        <th class="sticky-col">Student ID</th>
+        <th class="sticky-col-2">Student Name</th>`;
+
     dates.forEach(d => { headerHTML += `<th>${d}</th>`; });
-    headerHTML += `<th>Action</th></tr>`;
+
+    headerHTML += `
+        <th>Total Present</th>
+        <th>Total Sessions</th>
+        <th>Attendance Score <br><small>(/100)</small></th>
+        <th>Action</th>
+    </tr>`;
+
     thead.innerHTML = headerHTML;
 }
 
@@ -494,10 +544,67 @@ window.addNewAttendanceDate = () => {
 };
 
 // -------------------------------------------------------------
-// 7. EXPORT & DELETE HANDLERS
+// 7. DYNAMIC STUDENTS & COURSES PANELS
+// -------------------------------------------------------------
+window.renderStudentsGrid = () => {
+    const tbody = document.getElementById('students-table-body');
+    const globalSearch = document.getElementById('global-search');
+    if (!tbody) return;
+
+    const filter = globalSearch ? globalSearch.value.toLowerCase().trim() : '';
+    tbody.innerHTML = '';
+
+    globalStudents.forEach(student => {
+        if (filter && !student.name.toLowerCase().includes(filter) && !student.studentId.toLowerCase().includes(filter)) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="code-tag">${student.studentId}</span></td>
+            <td><strong>${student.name}</strong></td>
+            <td><button class="btn-delete" onclick="deleteStudent('${student.id}')">✕ Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.renderCoursesGrid = () => {
+    const tbody = document.getElementById('courses-table-body');
+    const globalSearch = document.getElementById('global-search');
+    if (!tbody) return;
+
+    const filter = globalSearch ? globalSearch.value.toLowerCase().trim() : '';
+    tbody.innerHTML = '';
+
+    globalCourses.forEach(course => {
+        if (filter && !course.name.toLowerCase().includes(filter) && !course.courseId.toLowerCase().includes(filter)) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="code-tag">${course.courseId}</span></td>
+            <td><strong>${course.name}</strong></td>
+            <td><button class="btn-delete" onclick="deleteCourse('${course.id}')">✕ Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.deleteCourse = (id) => {
+    if (!confirm("Remove course module from database?")) return;
+    if (isDemoMode) {
+        demoCourses = demoCourses.filter(c => c.id !== id);
+        loadDemoData();
+    } else if (db) {
+        db.collection('courses').doc(id).delete();
+    }
+};
+
+// -------------------------------------------------------------
+// 8. EXPORT & DELETE HANDLERS
 // -------------------------------------------------------------
 window.exportActiveTableToCSV = () => {
-    const tableId = activeTab === 'grades' ? 'grades-table' : 'attendance-table';
+    let tableId = 'grades-table';
+    if (activeTab === 'attendance') tableId = 'attendance-table';
+    if (activeTab === 'students') tableId = 'students-table';
+    if (activeTab === 'courses') tableId = 'courses-table';
+
     const table = document.getElementById(tableId);
     if (!table) return;
 
@@ -516,7 +623,7 @@ window.exportActiveTableToCSV = () => {
 
     const blob = new Blob([csv.join("\n")], { type: "text/csv" });
     const link = document.createElement("a");
-    link.download = `AI_Club_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `Courses_Database_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
     link.href = URL.createObjectURL(blob);
     link.click();
 };
