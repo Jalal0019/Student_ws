@@ -21,7 +21,7 @@
         <div class="glass-card login-card">
             <div class="brand-badge">⚡ COLLEGE OF AI • UNIV. OF BAGHDAD</div>
             <h2>Big Data & AI Club</h2>
-            <p>Database & Gradebook Portal</p>
+            <p>Database & Academic Portal</p>
 
             <button id="google-login-btn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <!-- MAIN SPREADSHEET DASHBOARD -->
+    <!-- MAIN DASHBOARD -->
     <div id="dashboard-container" style="display: none;">
         <header class="navbar">
             <div class="brand-group">
@@ -71,15 +71,15 @@
                 <div class="stat-card">
                     <div class="stat-icon emerald">📊</div>
                     <div>
-                        <h3 id="stat-school-avg">--%</h3>
-                        <p>Overall Average</p>
+                        <h3 id="stat-school-avg">-- / 100</h3>
+                        <p>Gradebook Average</p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon orange">📅</div>
                     <div>
-                        <h3 id="stat-attendance-rate">--%</h3>
-                        <p>Attendance Rate</p>
+                        <h3 id="stat-attendance-rate">-- / 100</h3>
+                        <p>Attendance Score</p>
                     </div>
                 </div>
             </section>
@@ -94,7 +94,7 @@
                 <div class="glass-card">
                     <h3>➕ Add New Student</h3>
                     <form id="student-form">
-                        <input type="text" id="student-id" placeholder="Student ID (e.g., STU-2024-01)" required>
+                        <input type="text" id="student-id" placeholder="Student ID (e.g., AI-2026-01)" required>
                         <input type="text" id="student-name" placeholder="Full Student Name" required>
                         <button type="submit" class="btn-primary">Add Student</button>
                     </form>
@@ -102,23 +102,23 @@
                 <div class="glass-card">
                     <h3>➕ Add Course Module</h3>
                     <form id="course-form">
-                        <input type="text" id="course-id" placeholder="Course Code (e.g., AI-301)" required>
-                        <input type="text" id="course-name" placeholder="Course Title (e.g., Machine Learning)" required>
+                        <input type="text" id="course-id" placeholder="Course Code (e.g., BIGDATA-101)" required>
+                        <input type="text" id="course-name" placeholder="Course Title (e.g., Big Data Systems)" required>
                         <button type="submit" class="btn-primary">Add Course</button>
                     </form>
                 </div>
             </section>
 
-            <!-- Navigation Tabs & Toolbar -->
+            <!-- Toolbar & Tab Navigation -->
             <div class="toolbar">
                 <div class="tab-nav">
                     <button class="tab-btn active" id="tab-btn-grades" onclick="switchTab('grades')">📊 Detailed Gradebook Grid</button>
-                    <button class="tab-btn" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Multi-Date Attendance Grid</button>
+                    <button class="tab-btn" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Attendance Grid</button>
                 </div>
                 <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export Sheet to CSV</button>
             </div>
 
-            <!-- TAB 1: GRADES SPREADSHEET TABLE -->
+            <!-- TAB 1: GRADEBOOK SPREADSHEET -->
             <section id="system-grades" class="glass-card tab-content">
                 <div class="filter-bar">
                     <div class="filter-group">
@@ -128,8 +128,8 @@
                 </div>
 
                 <div class="system-header">
-                    <h2>📊 Grade Breakdown Grid (Total: 100 Marks)</h2>
-                    <span id="gradebook-summary" class="summary-badge">Course Average: --%</span>
+                    <h2>📊 Grade Breakdown Grid (Total Marks out of 100)</h2>
+                    <span id="gradebook-summary" class="summary-badge">Course Average: -- / 100</span>
                 </div>
 
                 <div class="excel-scroll-container">
@@ -146,8 +146,7 @@
                                 <th>Report <br><small>(/10)</small></th>
                                 <th>Midterm <br><small>(/10)</small></th>
                                 <th>Final <br><small>(/50)</small></th>
-                                <th>Total <br><small>(/100)</small></th>
-                                <th>Grade</th>
+                                <th>Total Mark <br><small>(/100)</small></th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -158,7 +157,7 @@
                 </div>
             </section>
 
-            <!-- TAB 2: MULTI-DATE ATTENDANCE TABLE -->
+            <!-- TAB 2: ATTENDANCE SPREADSHEET -->
             <section id="system-attendance" class="glass-card tab-content" style="display: none;">
                 <div class="filter-bar">
                     <div class="filter-group">
@@ -169,14 +168,14 @@
                 </div>
 
                 <div class="system-header">
-                    <h2>📚 Multi-Date Attendance Grid (All Session Dates)</h2>
+                    <h2>📚 Attendance Grid (Sessions & Total Mark out of 100)</h2>
                     <span id="attendance-summary" class="summary-badge">Select a course to load dates</span>
                 </div>
 
                 <div class="excel-scroll-container">
                     <table id="attendance-table" class="excel-table">
                         <thead id="attendance-table-head">
-                            <!-- Dynamic Date Header Columns -->
+                            <!-- Dynamic Date & Summary Header Columns -->
                         </thead>
                         <tbody id="attendance-table-body">
                             <!-- Dynamic Student Attendance Rows -->
