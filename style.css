@@ -15,11 +15,7 @@ body {
     padding: 20px;
 }
 
-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
+/* Container & Cards */
 .container {
     max-width: 900px;
     margin: 0 auto;
@@ -35,6 +31,27 @@ header {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Header & User Info */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto 2rem auto;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.user-badge {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 4px 0 0 0;
+}
+
+/* Forms & Inputs */
 form {
     display: flex;
     gap: 10px;
@@ -56,12 +73,14 @@ button {
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
+    transition: background-color 0.2s;
 }
 
 button:hover {
     background-color: var(--primary-hover);
 }
 
+/* Table Styling */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -74,6 +93,7 @@ th, td {
     border-bottom: 1px solid var(--border);
 }
 
+/* Interactive Buttons */
 .btn-status {
     padding: 6px 12px;
     border-radius: 4px;
@@ -83,42 +103,15 @@ th, td {
 
 .present { background-color: #dcfce7; color: #166534; }
 .absent { background-color: #fee2e2; color: #991b1b; }
-.btn-delete { background-color: #ef4444; padding: 6px 10px; font-size: 0.8rem; }
 
-/* Center Login Card */
-.center-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 80vh;
+.btn-delete {
+    background-color: #ef4444;
+    padding: 6px 10px;
+    font-size: 0.8rem;
 }
 
-.login-card {
-    max-width: 350px;
-    width: 100%;
-    text-align: center;
-}
-
-.login-card form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 1rem;
-}
-
-.error-msg {
-    color: #ef4444;
-    font-size: 0.85rem;
-    margin-top: 10px;
-}
-
-/* Header & Logout Layout */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 900px;
-    margin: 0 auto 2rem auto;
+.btn-delete:hover {
+    background-color: #dc2626;
 }
 
 .btn-logout {
@@ -129,4 +122,47 @@ header {
 
 .btn-logout:hover {
     background-color: #475569;
+}
+
+/* Login Card Centering */
+.center-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+
+.login-card {
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-google {
+    background-color: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+}
+
+.btn-google:hover {
+    background-color: #f9fafb;
+}
+
+.btn-google img {
+    width: 18px;
+    height: 18px;
+}
+
+.error-msg {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-top: 10px;
 }
