@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Courses Database | Admin Panel</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -16,22 +13,16 @@
 </head>
 <body>
 
-    <!-- SIGN-IN SCREEN -->
+    <!-- SIGN-IN SCREEN (GOOGLE ONLY) -->
     <div id="login-container" class="center-container">
         <div class="glass-card login-card">
-            <div class="brand-badge">⚡ COLLEGE OF AI • UNIV. OF BAGHDAD</div>
+            <div class="brand-badge">COLLEGE OF AI • UNIV. OF BAGHDAD</div>
             <h2>Courses Database</h2>
-            <p>Admin Management System</p>
+            <p>Admin Management Portal</p>
 
             <button id="google-login-btn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
                 Sign in with Google
-            </button>
-
-            <div class="divider"><span>OR</span></div>
-
-            <button id="demo-login-btn" class="btn-demo">
-                🚀 Bypass Sign-In (Demo / Quick Access)
             </button>
 
             <p id="access-denied" class="error-msg" style="display: none;"></p>
@@ -44,7 +35,7 @@
         <!-- ADMIN NAVIGATION HEADER -->
         <header class="navbar">
             <div class="brand-group">
-                <div class="club-logo">⚡</div>
+                <div class="club-logo">🏛️</div>
                 <div>
                     <h1><span class="gradient-text">Courses Database</span> Admin Panel</h1>
                     <p id="user-info" class="user-badge">College of AI • University of Baghdad</p>
@@ -98,6 +89,7 @@
                             <table class="excel-table">
                                 <thead>
                                     <tr>
+                                        <th>#</th>
                                         <th>Code</th>
                                         <th>Course Name</th>
                                         <th>Action</th>
@@ -110,11 +102,11 @@
 
                     <!-- Student Enrollment Card -->
                     <div class="glass-card">
-                        <h3>👥 2. Register & Assign Student</h3>
+                        <h3>👥 2. Register & Assign Student to Course</h3>
                         <form id="student-form">
                             <input type="text" id="student-id" placeholder="Student ID (e.g., AI-2026-01)" required>
                             <input type="text" id="student-name" placeholder="Full Student Name" required>
-                            <label>Assign to Primary Course:</label>
+                            <label>Select Enrolled Course:</label>
                             <select id="student-course-assign" required></select>
                             <button type="submit" class="btn-primary">Enroll Student</button>
                         </form>
@@ -124,8 +116,10 @@
                             <table class="excel-table">
                                 <thead>
                                     <tr>
+                                        <th>#</th>
                                         <th>Student ID</th>
                                         <th>Student Name</th>
+                                        <th>Assigned Course</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -182,6 +176,7 @@
                         <table id="grades-table" class="excel-table">
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th class="sticky-col">Student ID</th>
                                     <th class="sticky-col-2">Student Name</th>
                                     <th>Quiz 1 <br><small>(/5)</small></th>
