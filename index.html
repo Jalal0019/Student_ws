@@ -6,7 +6,7 @@
     <title>Courses Database | Admin Panel</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -56,7 +56,6 @@
             <!-- PAGE 1: ADMIN PANEL (COURSES & STUDENTS) -->
             <section id="page-admin" class="page-view active-page">
                 
-                <!-- Metrics Bar -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon purple">📖</div>
@@ -75,7 +74,7 @@
                 </div>
 
                 <div class="grid-2 margin-top">
-                    <!-- Course Creation Card -->
+                    <!-- Course Creation -->
                     <div class="glass-card">
                         <h3>📖 1. Create New Course</h3>
                         <form id="course-form">
@@ -100,7 +99,7 @@
                         </div>
                     </div>
 
-                    <!-- Student Enrollment Card -->
+                    <!-- Student Enrollment -->
                     <div class="glass-card">
                         <h3>👥 2. Register & Assign Student to Course</h3>
                         <form id="student-form">
