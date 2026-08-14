@@ -58,9 +58,8 @@
     <input id="cfgBranch" value="main">
     <label>مجلد البيانات</label>
     <input id="cfgPath" value="data">
-    <label>بريدك الإلكتروني الجامعي</label>
-    <input id="studentEmail" type="email" placeholder="name@uobaghdad.edu.iq" style="direction:ltr; text-align:left;">
-    <button onclick="loadRecord()">عرض السجلّ</button>
+    <label>الدخول بحساب Google الجامعي</label>
+    <div id="googleBtn" style="margin-bottom:6px;"></div>
     <div class="status" id="status"></div>
   </div>
 
@@ -78,10 +77,29 @@
   </div>
 </main>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
+// ضع هنا نفس Google OAuth Client ID المستخدم في teacher.html
+const GOOGLE_CLIENT_ID = "PUT_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
+
 function setStatus(msg, err){
   const el = document.getElementById('status');
   el.textContent = msg; el.className = 'status' + (err?' err':'');
+}
+
+window.onload = function(){
+  if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+    google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme: 'filled_black', shape: 'pill', text: 'signin_with', locale: 'ar' });
+  } else {
+    document.getElementById('googleBtn').innerHTML =
+      '<div style="color:var(--danger); font-family:\'JetBrains Mono\',monospace; font-size:12.5px;">لم يتم ضبط Google Client ID بعد — راجع README.md.</div>';
+  }
+};
+
+function parseJwt(token){
+  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  return JSON.parse(decodeURIComponent(escape(atob(base64))));
 }
 
 async function fetchJSON(owner, repo, branch, path, filename){
@@ -91,16 +109,19 @@ async function fetchJSON(owner, repo, branch, path, filename){
   return res.json();
 }
 
-async function loadRecord(){
+async function handleGoogleCredential(response){
   const owner = document.getElementById('cfgOwner').value.trim();
   const repo = document.getElementById('cfgRepo').value.trim();
   const branch = document.getElementById('cfgBranch').value.trim() || 'main';
   const path = document.getElementById('cfgPath').value.trim() || 'data';
-  const email = document.getElementById('studentEmail').value.trim().toLowerCase();
-  if(!owner || !repo || !email){ setStatus('الرجاء تعبئة جميع الحقول.', true); return; }
-  if(!email.includes('@')){ setStatus('الرجاء إدخال بريد إلكتروني صحيح.', true); return; }
+  if(!owner || !repo){ setStatus('الرجاء تعبئة اسم المالك والمستودع أولاً.', true); return; }
+  const payload = parseJwt(response.credential);
+  if(!payload.email_verified){ setStatus('حساب Google هذا غير موثّق البريد.', true); return; }
+  const email = (payload.email || '').toLowerCase();
+  await loadRecord(owner, repo, branch, path, email);
+}
 
-  setStatus('جاري التحميل...');
+async function loadRecord(owner, repo, branch, path, email){
   try{
     const [students, subjects, attendance, grades] = await Promise.all([
       fetchJSON(owner, repo, branch, path, 'students.json'),

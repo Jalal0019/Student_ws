@@ -59,9 +59,9 @@
 </header>
 <main>
 
-  <!-- اتصال بالمستودع -->
-  <div class="panel" id="connectPanel">
-    <h2>01 / الاتصال بالمستودع</h2>
+  <!-- التحقق من هوية الأستاذ عبر Google -->
+  <div class="panel" id="emailPanel">
+    <h2>01 / بيانات المستودع ودخول الأستاذ</h2>
     <div class="row">
       <div><label>اسم المالك (owner)</label><input id="cfgOwner" placeholder="jalal-username"></div>
       <div><label>اسم المستودع (repo)</label><input id="cfgRepo" placeholder="attendance-data"></div>
@@ -70,6 +70,15 @@
       <div><label>الفرع (branch)</label><input id="cfgBranch" placeholder="main" value="main"></div>
       <div><label>مجلد البيانات (data path)</label><input id="cfgPath" placeholder="data" value="data"></div>
     </div>
+    <label>الدخول بحساب Google الجامعي</label>
+    <div id="googleBtn" style="margin-bottom:14px;"></div>
+    <div class="status" id="emailStatus"></div>
+  </div>
+
+  <!-- اتصال بالمستودع -->
+  <div class="panel hidden" id="connectPanel">
+    <h2>02 / صلاحية الكتابة</h2>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:14px;">تم التحقق من حسابك بنجاح. أدخل التوكن لتفعيل الحفظ على GitHub.</p>
     <label>GitHub Personal Access Token (لا يُخزَّن إلا في هذه الجلسة فقط)</label>
     <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
     <div class="actions">
@@ -157,23 +166,68 @@
   </div>
 </main>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
+// ضع هنا Google OAuth Client ID الخاص بمشروعك (راجع README لخطوات إنشائه)
+const GOOGLE_CLIENT_ID = "PUT_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
+
 let cfg = {}, students = [], subjects = [], attendance = {}, grades = {};
 let shas = { students: null, attendance: null, grades: null, subjects: null };
 
-document.querySelectorAll('.tab').forEach(t=>{
-  t.onclick = ()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.tabpanel').forEach(x=>x.classList.add('hidden'));
-    t.classList.add('active');
-    document.getElementById('tab-'+t.dataset.tab).classList.remove('hidden');
-  };
-});
+window.onload = function(){
+  if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+    google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme: 'filled_black', shape: 'pill', text: 'signin_with', locale: 'ar' });
+  } else {
+    document.getElementById('googleBtn').innerHTML =
+      '<div style="color:var(--danger); font-family:\'JetBrains Mono\',monospace; font-size:12.5px;">لم يتم ضبط Google Client ID بعد — راجع README.md.</div>';
+  }
+  const saved = sessionStorage.getItem('gh_cfg');
+  if(saved){
+    const c = JSON.parse(saved);
+    document.getElementById('cfgOwner').value = c.owner || '';
+    document.getElementById('cfgRepo').value = c.repo || '';
+    document.getElementById('cfgBranch').value = c.branch || 'main';
+    document.getElementById('cfgPath').value = c.path || 'data';
+  }
+};
 
-function setStatus(id, msg, ok){
-  const el = document.getElementById(id);
-  el.textContent = msg;
-  el.className = 'status ' + (ok===true?'ok':ok===false?'err':'');
+function parseJwt(token){
+  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  return JSON.parse(decodeURIComponent(escape(atob(base64))));
+}
+
+async function handleGoogleCredential(response){
+  const owner = document.getElementById('cfgOwner').value.trim();
+  const repo = document.getElementById('cfgRepo').value.trim();
+  const branch = document.getElementById('cfgBranch').value.trim() || 'main';
+  const path = document.getElementById('cfgPath').value.trim() || 'data';
+  if(!owner || !repo){
+    setStatus('emailStatus', 'الرجاء تعبئة اسم المالك والمستودع قبل الدخول بـ Google.', false); return;
+  }
+  const payload = parseJwt(response.credential);
+  const email = (payload.email || '').toLowerCase();
+  if(!payload.email_verified){
+    setStatus('emailStatus', 'حساب Google هذا غير موثّق البريد.', false); return;
+  }
+  setStatus('emailStatus', 'جاري التحقق من صلاحيتك...');
+  try{
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/instructors.json?t=${Date.now()}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('تعذّر تحميل قائمة الأساتذة المخوّلين. تأكد من صحة بيانات المستودع.');
+    const instructors = await res.json();
+    const match = instructors.find(i=>(i.email||'').toLowerCase()===email);
+    if(!match){
+      setStatus('emailStatus', `حساب Google (${email}) غير مخوّل بالدخول كأستاذ.`, false);
+      return;
+    }
+    cfg = { owner, repo, branch, path, token: '' };
+    document.getElementById('emailPanel').classList.add('hidden');
+    document.getElementById('connectPanel').classList.remove('hidden');
+    setStatus('emailStatus', '');
+  }catch(e){
+    setStatus('emailStatus', e.message, false);
+  }
 }
 
 async function ghGet(filename){
@@ -204,16 +258,27 @@ async function ghPut(filename, dataObj, sha, message){
   return json.content.sha;
 }
 
-async function connect(){
-  cfg = {
-    owner: document.getElementById('cfgOwner').value.trim(),
-    repo: document.getElementById('cfgRepo').value.trim(),
-    branch: document.getElementById('cfgBranch').value.trim() || 'main',
-    path: document.getElementById('cfgPath').value.trim() || 'data',
-    token: document.getElementById('cfgToken').value.trim(),
+// setStatus مساعدة عامة
+function setStatus(id, msg, ok){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status ' + (ok===true?'ok':ok===false?'err':'');
+}
+
+// تبديل التبويبات
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tabpanel').forEach(x=>x.classList.add('hidden'));
+    t.classList.add('active');
+    document.getElementById('tab-'+t.dataset.tab).classList.remove('hidden');
   };
-  if(!cfg.owner || !cfg.repo || !cfg.token){
-    setStatus('connectStatus', 'الرجاء تعبئة المالك والمستودع والتوكن.', false); return;
+});
+
+async function connect(){
+  cfg.token = document.getElementById('cfgToken').value.trim();
+  if(!cfg.token){
+    setStatus('connectStatus', 'الرجاء إدخال التوكن.', false); return;
   }
   sessionStorage.setItem('gh_cfg', JSON.stringify(cfg));
   setStatus('connectStatus', 'جاري الاتصال وتحميل البيانات...');
@@ -381,17 +446,6 @@ async function saveGrades(){
 }
 document.getElementById('gradeSubject').addEventListener('change', renderGradesTable);
 
-// استرجاع إعدادات الجلسة إن وُجدت (بدون التوكن لأسباب أمنية عرضية فقط في الحقل)
-window.addEventListener('load', ()=>{
-  const saved = sessionStorage.getItem('gh_cfg');
-  if(saved){
-    const c = JSON.parse(saved);
-    document.getElementById('cfgOwner').value = c.owner || '';
-    document.getElementById('cfgRepo').value = c.repo || '';
-    document.getElementById('cfgBranch').value = c.branch || 'main';
-    document.getElementById('cfgPath').value = c.path || 'data';
-  }
-});
 </script>
 </body>
 </html>
