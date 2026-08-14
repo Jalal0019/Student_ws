@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic Database Portal</title>
+    <title>Big Data & AI Club | Academic Database Portal</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -15,94 +18,140 @@
 
     <!-- 1. LOGIN SCREEN -->
     <div id="login-container" class="center-container">
-        <div class="card login-card">
-            <h2>🔒 Database Portal</h2>
-            <p>Sign in with your authorized Google account to access system databases.</p>
+        <div class="glass-card login-card">
+            <div class="brand-badge">⚡ BIG DATA & AI CLUB</div>
+            <h2>Academic Database Portal</h2>
+            <p>Sign in with your authorized account to access the system core.</p>
             <button id="google-login-btn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
                 Sign in with Google
             </button>
-            <p id="access-denied" class="error-msg" style="display: none;">Access Denied! Unauthorized account.</p>
+            <p id="access-denied" class="error-msg" style="display: none;">Access Denied! Unauthorized Google account.</p>
         </div>
     </div>
 
     <!-- 2. MAIN DASHBOARD -->
     <div id="dashboard-container" style="display: none;">
-        <header>
-            <div>
-                <h1>🗄️ Academic Management Database</h1>
-                <p id="user-info" class="user-badge"></p>
+        <header class="navbar">
+            <div class="brand-group">
+                <span class="club-logo">⚡</span>
+                <div>
+                    <h1>Big Data & AI Club <span class="gradient-text">Database</span></h1>
+                    <p id="user-info" class="user-badge">Connected Admin: Loading...</p>
+                </div>
             </div>
             <button id="logout-btn" class="btn-logout">Log Out</button>
         </header>
 
         <main class="container">
-            <!-- Setup Section: Manage Students & Courses -->
-            <section class="card grid-2">
-                <div>
-                    <h3>➕ Add Student to Database</h3>
+            <!-- Executive Summary Analytics Cards -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon cyan">👥</div>
+                    <div>
+                        <h3 id="stat-total-students">0</h3>
+                        <p>Total Enrolled</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">📖</div>
+                    <div>
+                        <h3 id="stat-total-courses">0</h3>
+                        <p>Active Courses</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon emerald">📊</div>
+                    <div>
+                        <h3 id="stat-school-avg">--%</h3>
+                        <p>Global Academic Avg</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">✅</div>
+                    <div>
+                        <h3 id="stat-attendance-rate">--%</h3>
+                        <p>Today's Attendance</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Global Search Bar -->
+            <section class="glass-card search-card">
+                <input type="text" id="global-search" placeholder="🔍 Search database by Student Name, Course Code, or ID..." oninput="triggerGlobalSearch()">
+            </section>
+
+            <!-- Database Entry Forms -->
+            <section class="grid-2">
+                <div class="glass-card">
+                    <h3>➕ Register Student</h3>
                     <form id="student-form">
                         <input type="text" id="student-id" placeholder="Student ID (e.g. STU-101)" required>
-                        <input type="text" id="student-name" placeholder="Full Name" required>
-                        <button type="submit">Save Student</button>
+                        <input type="text" id="student-name" placeholder="Full Student Name" required>
+                        <button type="submit" class="btn-primary">Save to Database</button>
                     </form>
                 </div>
-                <div>
-                    <h3>➕ Add Course to Database</h3>
+                <div class="glass-card">
+                    <h3>➕ Register Course</h3>
                     <form id="course-form">
-                        <input type="text" id="course-id" placeholder="Course Code (e.g. MATH101)" required>
-                        <input type="text" id="course-name" placeholder="Course Name" required>
-                        <button type="submit">Save Course</button>
+                        <input type="text" id="course-id" placeholder="Course Code (e.g. AI-401)" required>
+                        <input type="text" id="course-name" placeholder="Course Title" required>
+                        <button type="submit" class="btn-primary">Save to Database</button>
                     </form>
                 </div>
             </section>
 
-            <!-- Database Selector Tabs -->
-            <div class="tab-nav">
-                <button class="tab-btn active" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Course Attendance Database</button>
-                <button class="tab-btn" id="tab-btn-grades" onclick="switchTab('grades')">👤 Student Grade Report Database</button>
+            <!-- Tab Navigation & Export Toolbar -->
+            <div class="toolbar">
+                <div class="tab-nav">
+                    <button class="tab-btn active" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Course Attendance Log</button>
+                    <button class="tab-btn" id="tab-btn-grades" onclick="switchTab('grades')">👤 Student Grade Reports</button>
+                </div>
+                <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export CSV Data</button>
             </div>
 
             <!-- SYSTEM 1: ATTENDANCE BY COURSE -->
-            <section id="system-attendance" class="card tab-content">
+            <section id="system-attendance" class="glass-card tab-content">
                 <div class="filter-bar">
-                    <div>
-                        <label><strong>Select Course:</strong></label>
+                    <div class="filter-group">
+                        <label>Select Course Module:</label>
                         <select id="attendance-course-select" onchange="renderAttendanceTable()">
                             <!-- Dynamic Courses -->
                         </select>
                     </div>
-                    <div>
-                        <label><strong>Select Date:</strong></label>
+                    <div class="filter-group">
+                        <label>Session Date:</label>
                         <input type="date" id="attendance-date" onchange="renderAttendanceTable()">
                     </div>
                 </div>
 
                 <div class="system-header">
                     <h2>📋 Course Roster Attendance</h2>
-                    <span id="attendance-summary" class="summary-badge">Select a course to view attendance</span>
+                    <span id="attendance-summary" class="summary-badge">Select course to load roster</span>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Student Name</th>
-                            <th>Attendance Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendance-table-body">
-                        <!-- Dynamic Course Attendance Rows -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table id="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Full Name</th>
+                                <th>Attendance Status</th>
+                                <th>Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body">
+                            <!-- Dynamic Course Attendance Rows -->
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
             <!-- SYSTEM 2: GRADES BY STUDENT -->
-            <section id="system-grades" class="card tab-content" style="display: none;">
+            <section id="system-grades" class="glass-card tab-content" style="display: none;">
                 <div class="filter-bar">
-                    <div>
-                        <label><strong>Select Student:</strong></label>
+                    <div class="filter-group">
+                        <label>Select Student Record:</label>
                         <select id="grade-student-select" onchange="renderStudentGradeCard()">
                             <!-- Dynamic Students -->
                         </select>
@@ -114,20 +163,22 @@
                     <span id="overall-gpa" class="summary-badge">Overall Average: --%</span>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Course Code</th>
-                            <th>Course Name</th>
-                            <th>Grade Score (%)</th>
-                            <th>Letter Grade</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="grade-table-body">
-                        <!-- Dynamic Student Grade Rows -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table id="grades-table">
+                        <thead>
+                            <tr>
+                                <th>Course Code</th>
+                                <th>Course Name</th>
+                                <th>Score (%)</th>
+                                <th>Letter Grade</th>
+                                <th>Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grade-table-body">
+                            <!-- Dynamic Student Grade Rows -->
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </div>
