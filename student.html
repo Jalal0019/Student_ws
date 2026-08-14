@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بوابة الطالب — نظام الحضور والدرجات</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+  :root{
+    --ink:#0b1220; --paper:#eef1f6; --panel:#121a2b; --panel2:#0e1626;
+    --line:rgba(255,255,255,.09); --accent:#5ee3c9; --accent2:#f2b84b; --danger:#e2685f;
+    --muted:#7c8aa5;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--ink); color:var(--paper); font-family:'Tajawal',sans-serif; min-height:100vh;}
+  header{padding:20px 28px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;}
+  header a{color:var(--muted); text-decoration:none; font-family:'JetBrains Mono',monospace; font-size:13px;}
+  h1{font-size:20px; font-weight:900;}
+  main{max-width:800px; margin:0 auto; padding:28px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:20px;}
+  label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px;}
+  input{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--paper); font-family:'JetBrains Mono',monospace; font-size:14px; margin-bottom:12px;
+  }
+  button{
+    background:var(--accent); color:#04241d; border:none; padding:11px 18px; border-radius:8px;
+    font-weight:700; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:14px;
+  }
+  .status{font-family:'JetBrains Mono',monospace; font-size:12.5px; margin-top:10px;}
+  .status.err{color:var(--danger);}
+  table{width:100%; border-collapse:collapse; font-size:14px; margin-top:10px;}
+  th,td{padding:8px 10px; text-align:right; border-bottom:1px solid var(--line);}
+  th{color:var(--muted); font-weight:500; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .present{color:var(--accent);} .absent{color:var(--danger);} .late{color:var(--accent2);}
+  .hidden{display:none;}
+  .summary{display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;}
+  .stat{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:14px 18px; flex:1; min-width:120px; text-align:center;}
+  .stat .n{font-size:26px; font-weight:900; font-family:'JetBrains Mono',monospace;}
+  .stat .l{font-size:12px; color:var(--muted); margin-top:4px;}
+  h2{font-size:16px; margin-bottom:12px; color:var(--accent2);}
+</style>
+</head>
+<body>
+<header>
+  <h1>بوابة الطالب</h1>
+  <a href="index.html">→ الرئيسية</a>
+</header>
+<main>
+  <div class="panel">
+    <h2>بحث عن سجلّك</h2>
+    <label>اسم المالك (owner)</label>
+    <input id="cfgOwner" placeholder="jalal-username">
+    <label>اسم المستودع (repo)</label>
+    <input id="cfgRepo" placeholder="attendance-data">
+    <label>الفرع</label>
+    <input id="cfgBranch" value="main">
+    <label>مجلد البيانات</label>
+    <input id="cfgPath" value="data">
+    <label>بريدك الإلكتروني الجامعي</label>
+    <input id="studentEmail" type="email" placeholder="name@uobaghdad.edu.iq" style="direction:ltr; text-align:left;">
+    <button onclick="loadRecord()">عرض السجلّ</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div id="result" class="hidden">
+    <div class="panel">
+      <h2 id="studentName"></h2>
+      <div class="summary" id="summary"></div>
+      <h2>سجل الحضور</h2>
+      <table><thead><tr><th>التاريخ</th><th>المادة</th><th>الحالة</th></tr></thead><tbody id="attBody"></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>الدرجات</h2>
+      <table><thead><tr><th>المادة</th><th>التقييم</th><th>الدرجة</th></tr></thead><tbody id="gradeBody"></tbody></table>
+    </div>
+  </div>
+</main>
+
+<script>
+function setStatus(msg, err){
+  const el = document.getElementById('status');
+  el.textContent = msg; el.className = 'status' + (err?' err':'');
+}
+
+async function fetchJSON(owner, repo, branch, path, filename){
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/${filename}`;
+  const res = await fetch(url + `?t=${Date.now()}`); // تجنّب التخزين المؤقت
+  if(!res.ok) throw new Error(`تعذّر تحميل ${filename} (${res.status}). تأكد أن المستودع عام (public) والمسار صحيح.`);
+  return res.json();
+}
+
+async function loadRecord(){
+  const owner = document.getElementById('cfgOwner').value.trim();
+  const repo = document.getElementById('cfgRepo').value.trim();
+  const branch = document.getElementById('cfgBranch').value.trim() || 'main';
+  const path = document.getElementById('cfgPath').value.trim() || 'data';
+  const email = document.getElementById('studentEmail').value.trim().toLowerCase();
+  if(!owner || !repo || !email){ setStatus('الرجاء تعبئة جميع الحقول.', true); return; }
+  if(!email.includes('@')){ setStatus('الرجاء إدخال بريد إلكتروني صحيح.', true); return; }
+
+  setStatus('جاري التحميل...');
+  try{
+    const [students, subjects, attendance, grades] = await Promise.all([
+      fetchJSON(owner, repo, branch, path, 'students.json'),
+      fetchJSON(owner, repo, branch, path, 'subjects.json'),
+      fetchJSON(owner, repo, branch, path, 'attendance.json'),
+      fetchJSON(owner, repo, branch, path, 'grades.json'),
+    ]);
+    const student = students.find(s=>(s.email||'').toLowerCase()===email);
+    if(!student){ setStatus('لا يوجد طالب بهذا البريد الإلكتروني.', true); document.getElementById('result').classList.add('hidden'); return; }
+    const sid = student.id;
+
+    document.getElementById('studentName').textContent = `${student.name} — ${student.id}`;
+
+    // الحضور (مصنّف حسب المادة)
+    let present=0, absent=0, late=0;
+    let attRows = '';
+    Object.keys(attendance).sort().forEach(subjectCode=>{
+      const subjectName = (subjects.find(s=>s.code===subjectCode)||{}).name || subjectCode;
+      const dayMap = attendance[subjectCode];
+      const dates = Object.keys(dayMap).sort();
+      dates.forEach(d=>{
+        const st = dayMap[d][sid];
+        if(!st) return;
+        if(st==='present') present++; else if(st==='absent') absent++; else if(st==='late') late++;
+        const label = st==='present'?'حاضر':st==='absent'?'غائب':'متأخر';
+        attRows += `<tr><td class="mono">${d}</td><td>${subjectName}</td><td class="${st}">${label}</td></tr>`;
+      });
+    });
+    document.getElementById('attBody').innerHTML = attRows || '<tr><td colspan="3">لا توجد سجلات بعد.</td></tr>';
+
+    const total = present+absent+late;
+    document.getElementById('summary').innerHTML = `
+      <div class="stat"><div class="n">${present}</div><div class="l">حاضر</div></div>
+      <div class="stat"><div class="n">${absent}</div><div class="l">غائب</div></div>
+      <div class="stat"><div class="n">${late}</div><div class="l">متأخر</div></div>
+      <div class="stat"><div class="n">${total? Math.round(present*100/total):0}%</div><div class="l">نسبة الحضور</div></div>
+    `;
+
+    // الدرجات (مصنّفة حسب المادة)
+    let gradeRows = '';
+    Object.keys(grades).sort().forEach(subjectCode=>{
+      const subjectName = (subjects.find(s=>s.code===subjectCode)||{}).name || subjectCode;
+      const g = (grades[subjectCode] && grades[subjectCode][sid]) || {};
+      Object.entries(g).forEach(([name, v])=>{
+        gradeRows += `<tr><td>${subjectName}</td><td>${name}</td><td class="mono">${v.score} / ${v.max}</td></tr>`;
+      });
+    });
+    document.getElementById('gradeBody').innerHTML = gradeRows || '<tr><td colspan="3">لا توجد درجات مسجّلة بعد.</td></tr>';
+
+    document.getElementById('result').classList.remove('hidden');
+    setStatus('');
+  }catch(e){
+    setStatus(e.message, true);
+    document.getElementById('result').classList.add('hidden');
+  }
+}
+</script>
+</body>
+</html>
