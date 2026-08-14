@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Big Data & AI Club | Academic Database Portal</title>
+    <title>Big Data & AI Club | Excel Database Portal</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,12 +16,12 @@
 </head>
 <body>
 
-    <!-- 1. LOGIN SCREEN -->
+    <!-- LOGIN SCREEN -->
     <div id="login-container" class="center-container">
         <div class="glass-card login-card">
             <div class="brand-badge">⚡ BIG DATA & AI CLUB</div>
-            <h2>Academic Database Portal</h2>
-            <p>Sign in with your authorized account to access the system core.</p>
+            <h2>Excel Database Portal</h2>
+            <p>Sign in with your authorized account to access spreadsheet core.</p>
             <button id="google-login-btn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
                 Sign in with Google
@@ -30,13 +30,13 @@
         </div>
     </div>
 
-    <!-- 2. MAIN DASHBOARD -->
+    <!-- MAIN SPREADSHEET DASHBOARD -->
     <div id="dashboard-container" style="display: none;">
         <header class="navbar">
             <div class="brand-group">
                 <span class="club-logo">⚡</span>
                 <div>
-                    <h1>Big Data & AI Club <span class="gradient-text">Database</span></h1>
+                    <h1>Big Data & AI Club <span class="gradient-text">Grid Database</span></h1>
                     <p id="user-info" class="user-badge">Connected Admin: Loading...</p>
                 </div>
             </div>
@@ -44,7 +44,7 @@
         </header>
 
         <main class="container">
-            <!-- Executive Summary Analytics Cards -->
+            <!-- Executive Metrics -->
             <section class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon cyan">👥</div>
@@ -76,12 +76,12 @@
                 </div>
             </section>
 
-            <!-- Global Search Bar -->
+            <!-- Search Bar -->
             <section class="glass-card search-card">
-                <input type="text" id="global-search" placeholder="🔍 Search database by Student Name, Course Code, or ID..." oninput="triggerGlobalSearch()">
+                <input type="text" id="global-search" placeholder="🔍 Search spreadsheet by Student Name, Course Code, or ID..." oninput="triggerGlobalSearch()">
             </section>
 
-            <!-- Database Entry Forms -->
+            <!-- Database Registration Forms -->
             <section class="grid-2">
                 <div class="glass-card">
                     <h3>➕ Register Student</h3>
@@ -101,81 +101,81 @@
                 </div>
             </section>
 
-            <!-- Tab Navigation & Export Toolbar -->
+            <!-- Navigation Tabs & Tools -->
             <div class="toolbar">
                 <div class="tab-nav">
-                    <button class="tab-btn active" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Course Attendance Log</button>
-                    <button class="tab-btn" id="tab-btn-grades" onclick="switchTab('grades')">👤 Student Grade Reports</button>
+                    <button class="tab-btn active" id="tab-btn-grades" onclick="switchTab('grades')">📊 Course Gradebook Grid</button>
+                    <button class="tab-btn" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Multi-Date Attendance Sheet</button>
                 </div>
-                <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export CSV Data</button>
+                <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export CSV Sheet</button>
             </div>
 
-            <!-- SYSTEM 1: ATTENDANCE BY COURSE -->
-            <section id="system-attendance" class="glass-card tab-content">
+            <!-- TAB 1: GRADES SPREADSHEET (DIVIDED MARKS) -->
+            <section id="system-grades" class="glass-card tab-content">
                 <div class="filter-bar">
                     <div class="filter-group">
                         <label>Select Course Module:</label>
-                        <select id="attendance-course-select" onchange="renderAttendanceTable()">
+                        <select id="grade-course-select" onchange="renderGradebookGrid()">
                             <!-- Dynamic Courses -->
                         </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Session Date:</label>
-                        <input type="date" id="attendance-date" onchange="renderAttendanceTable()">
                     </div>
                 </div>
 
                 <div class="system-header">
-                    <h2>📋 Course Roster Attendance</h2>
-                    <span id="attendance-summary" class="summary-badge">Select course to load roster</span>
+                    <h2>📊 Course Grade Breakdown Grid (100 Marks Total)</h2>
+                    <span id="gradebook-summary" class="summary-badge">Course Average: --%</span>
                 </div>
 
-                <div class="table-responsive">
-                    <table id="attendance-table">
+                <div class="excel-scroll-container">
+                    <table id="grades-table" class="excel-table">
                         <thead>
                             <tr>
-                                <th>Student ID</th>
-                                <th>Full Name</th>
-                                <th>Attendance Status</th>
+                                <th class="sticky-col">Student ID</th>
+                                <th class="sticky-col-2">Student Name</th>
+                                <th>Q1 <br><small>(/5)</small></th>
+                                <th>Q2 <br><small>(/5)</small></th>
+                                <th>A1 <br><small>(/5)</small></th>
+                                <th>A2 <br><small>(/5)</small></th>
+                                <th>Proj <br><small>(/10)</small></th>
+                                <th>Report <br><small>(/10)</small></th>
+                                <th>Mid <br><small>(/10)</small></th>
+                                <th>Final <br><small>(/50)</small></th>
+                                <th>Total <br><small>(/100)</small></th>
+                                <th>Grade</th>
                                 <th>Manage</th>
                             </tr>
                         </thead>
-                        <tbody id="attendance-table-body">
-                            <!-- Dynamic Course Attendance Rows -->
+                        <tbody id="grade-table-body">
+                            <!-- Dynamic Gradebook Rows -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- SYSTEM 2: GRADES BY STUDENT -->
-            <section id="system-grades" class="glass-card tab-content" style="display: none;">
+            <!-- TAB 2: ATTENDANCE SPREADSHEET (ALL DATES) -->
+            <section id="system-attendance" class="glass-card tab-content" style="display: none;">
                 <div class="filter-bar">
                     <div class="filter-group">
-                        <label>Select Student Record:</label>
-                        <select id="grade-student-select" onchange="renderStudentGradeCard()">
-                            <!-- Dynamic Students -->
+                        <label>Select Course Module:</label>
+                        <select id="attendance-course-select" onchange="renderAttendanceGrid()">
+                            <!-- Dynamic Courses -->
                         </select>
                     </div>
+                    <button class="btn-add-date" onclick="addNewAttendanceDate()">➕ Add Session Date Column</button>
                 </div>
 
                 <div class="system-header">
-                    <h2>📊 Student Academic Grade Card</h2>
-                    <span id="overall-gpa" class="summary-badge">Overall Average: --%</span>
+                    <h2>📚 Multi-Date Attendance Sheet</h2>
+                    <span id="attendance-summary" class="summary-badge">Select course to load dates</span>
                 </div>
 
-                <div class="table-responsive">
-                    <table id="grades-table">
-                        <thead>
-                            <tr>
-                                <th>Course Code</th>
-                                <th>Course Name</th>
-                                <th>Score (%)</th>
-                                <th>Letter Grade</th>
-                                <th>Manage</th>
-                            </tr>
+                <div class="excel-scroll-container">
+                    <table id="attendance-table" class="excel-table">
+                        <thead id="attendance-table-head">
+                            <!-- Dynamic Date Columns -->
                         </thead>
-                        <tbody id="grade-table-body">
-                            <!-- Dynamic Student Grade Rows -->
+                        <tbody id="attendance-table-body">
+                            <!-- Dynamic Student Roster Attendance Rows -->
                         </tbody>
                     </table>
                 </div>
