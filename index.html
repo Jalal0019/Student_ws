@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Big Data & AI Club | Excel Database Portal</title>
+    <title>Big Data & AI Club | University of Baghdad</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,17 +16,25 @@
 </head>
 <body>
 
-    <!-- LOGIN SCREEN -->
+    <!-- SIGN-IN SCREEN -->
     <div id="login-container" class="center-container">
         <div class="glass-card login-card">
-            <div class="brand-badge">⚡ BIG DATA & AI CLUB</div>
-            <h2>Excel Database Portal</h2>
-            <p>Sign in with your authorized account to access spreadsheet core.</p>
+            <div class="brand-badge">⚡ COLLEGE OF AI • UNIV. OF BAGHDAD</div>
+            <h2>Big Data & AI Club</h2>
+            <p>Database & Gradebook Portal</p>
+
             <button id="google-login-btn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
                 Sign in with Google
             </button>
-            <p id="access-denied" class="error-msg" style="display: none;">Access Denied! Unauthorized Google account.</p>
+
+            <div class="divider"><span>OR</span></div>
+
+            <button id="demo-login-btn" class="btn-demo">
+                🚀 Bypass Sign-In (Demo / Quick Access)
+            </button>
+
+            <p id="access-denied" class="error-msg" style="display: none;"></p>
         </div>
     </div>
 
@@ -34,13 +42,13 @@
     <div id="dashboard-container" style="display: none;">
         <header class="navbar">
             <div class="brand-group">
-                <span class="club-logo">⚡</span>
+                <div class="club-logo">⚡</div>
                 <div>
-                    <h1>Big Data & AI Club <span class="gradient-text">Grid Database</span></h1>
-                    <p id="user-info" class="user-badge">Connected Admin: Loading...</p>
+                    <h1>Big Data & AI Club <span class="gradient-text">Academic Database</span></h1>
+                    <p id="user-info" class="user-badge">College of AI • University of Baghdad</p>
                 </div>
             </div>
-            <button id="logout-btn" class="btn-logout">Log Out</button>
+            <button id="logout-btn" class="btn-logout">Exit System</button>
         </header>
 
         <main class="container">
@@ -57,72 +65,70 @@
                     <div class="stat-icon purple">📖</div>
                     <div>
                         <h3 id="stat-total-courses">0</h3>
-                        <p>Active Courses</p>
+                        <p>Active Modules</p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon emerald">📊</div>
                     <div>
                         <h3 id="stat-school-avg">--%</h3>
-                        <p>Global Academic Avg</p>
+                        <p>Overall Average</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon orange">✅</div>
+                    <div class="stat-icon orange">📅</div>
                     <div>
                         <h3 id="stat-attendance-rate">--%</h3>
-                        <p>Today's Attendance</p>
+                        <p>Attendance Rate</p>
                     </div>
                 </div>
             </section>
 
             <!-- Search Bar -->
             <section class="glass-card search-card">
-                <input type="text" id="global-search" placeholder="🔍 Search spreadsheet by Student Name, Course Code, or ID..." oninput="triggerGlobalSearch()">
+                <input type="text" id="global-search" placeholder="🔍 Search spreadsheet by Student Name, ID, or Course Code..." oninput="triggerGlobalSearch()">
             </section>
 
-            <!-- Database Registration Forms -->
+            <!-- Quick Registration Forms -->
             <section class="grid-2">
                 <div class="glass-card">
-                    <h3>➕ Register Student</h3>
+                    <h3>➕ Add New Student</h3>
                     <form id="student-form">
-                        <input type="text" id="student-id" placeholder="Student ID (e.g. STU-101)" required>
+                        <input type="text" id="student-id" placeholder="Student ID (e.g., STU-2024-01)" required>
                         <input type="text" id="student-name" placeholder="Full Student Name" required>
-                        <button type="submit" class="btn-primary">Save to Database</button>
+                        <button type="submit" class="btn-primary">Add Student</button>
                     </form>
                 </div>
                 <div class="glass-card">
-                    <h3>➕ Register Course</h3>
+                    <h3>➕ Add Course Module</h3>
                     <form id="course-form">
-                        <input type="text" id="course-id" placeholder="Course Code (e.g. AI-401)" required>
-                        <input type="text" id="course-name" placeholder="Course Title" required>
-                        <button type="submit" class="btn-primary">Save to Database</button>
+                        <input type="text" id="course-id" placeholder="Course Code (e.g., AI-301)" required>
+                        <input type="text" id="course-name" placeholder="Course Title (e.g., Machine Learning)" required>
+                        <button type="submit" class="btn-primary">Add Course</button>
                     </form>
                 </div>
             </section>
 
-            <!-- Navigation Tabs & Tools -->
+            <!-- Navigation Tabs & Toolbar -->
             <div class="toolbar">
                 <div class="tab-nav">
-                    <button class="tab-btn active" id="tab-btn-grades" onclick="switchTab('grades')">📊 Course Gradebook Grid</button>
-                    <button class="tab-btn" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Multi-Date Attendance Sheet</button>
+                    <button class="tab-btn active" id="tab-btn-grades" onclick="switchTab('grades')">📊 Detailed Gradebook Grid</button>
+                    <button class="tab-btn" id="tab-btn-attendance" onclick="switchTab('attendance')">📚 Multi-Date Attendance Grid</button>
                 </div>
-                <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export CSV Sheet</button>
+                <button class="btn-export" onclick="exportActiveTableToCSV()">📥 Export Sheet to CSV</button>
             </div>
 
-            <!-- TAB 1: GRADES SPREADSHEET (DIVIDED MARKS) -->
+            <!-- TAB 1: GRADES SPREADSHEET TABLE -->
             <section id="system-grades" class="glass-card tab-content">
                 <div class="filter-bar">
                     <div class="filter-group">
-                        <label>Select Course Module:</label>
-                        <select id="grade-course-select" onchange="renderGradebookGrid()">
-                            <!-- Dynamic Courses -->
-                        </select>
+                        <label>Select Module:</label>
+                        <select id="grade-course-select" onchange="renderGradebookGrid()"></select>
                     </div>
                 </div>
 
                 <div class="system-header">
-                    <h2>📊 Course Grade Breakdown Grid (100 Marks Total)</h2>
+                    <h2>📊 Grade Breakdown Grid (Total: 100 Marks)</h2>
                     <span id="gradebook-summary" class="summary-badge">Course Average: --%</span>
                 </div>
 
@@ -132,50 +138,48 @@
                             <tr>
                                 <th class="sticky-col">Student ID</th>
                                 <th class="sticky-col-2">Student Name</th>
-                                <th>Q1 <br><small>(/5)</small></th>
-                                <th>Q2 <br><small>(/5)</small></th>
-                                <th>A1 <br><small>(/5)</small></th>
-                                <th>A2 <br><small>(/5)</small></th>
-                                <th>Proj <br><small>(/10)</small></th>
+                                <th>Quiz 1 <br><small>(/5)</small></th>
+                                <th>Quiz 2 <br><small>(/5)</small></th>
+                                <th>Assign 1 <br><small>(/5)</small></th>
+                                <th>Assign 2 <br><small>(/5)</small></th>
+                                <th>Project <br><small>(/10)</small></th>
                                 <th>Report <br><small>(/10)</small></th>
-                                <th>Mid <br><small>(/10)</small></th>
+                                <th>Midterm <br><small>(/10)</small></th>
                                 <th>Final <br><small>(/50)</small></th>
                                 <th>Total <br><small>(/100)</small></th>
                                 <th>Grade</th>
-                                <th>Manage</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="grade-table-body">
-                            <!-- Dynamic Gradebook Rows -->
+                            <!-- Rows populated dynamically -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- TAB 2: ATTENDANCE SPREADSHEET (ALL DATES) -->
+            <!-- TAB 2: MULTI-DATE ATTENDANCE TABLE -->
             <section id="system-attendance" class="glass-card tab-content" style="display: none;">
                 <div class="filter-bar">
                     <div class="filter-group">
-                        <label>Select Course Module:</label>
-                        <select id="attendance-course-select" onchange="renderAttendanceGrid()">
-                            <!-- Dynamic Courses -->
-                        </select>
+                        <label>Select Module:</label>
+                        <select id="attendance-course-select" onchange="renderAttendanceGrid()"></select>
                     </div>
                     <button class="btn-add-date" onclick="addNewAttendanceDate()">➕ Add Session Date Column</button>
                 </div>
 
                 <div class="system-header">
-                    <h2>📚 Multi-Date Attendance Sheet</h2>
-                    <span id="attendance-summary" class="summary-badge">Select course to load dates</span>
+                    <h2>📚 Multi-Date Attendance Grid (All Session Dates)</h2>
+                    <span id="attendance-summary" class="summary-badge">Select a course to load dates</span>
                 </div>
 
                 <div class="excel-scroll-container">
                     <table id="attendance-table" class="excel-table">
                         <thead id="attendance-table-head">
-                            <!-- Dynamic Date Columns -->
+                            <!-- Dynamic Date Header Columns -->
                         </thead>
                         <tbody id="attendance-table-body">
-                            <!-- Dynamic Student Roster Attendance Rows -->
+                            <!-- Dynamic Student Attendance Rows -->
                         </tbody>
                     </table>
                 </div>
