@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Courses Database | Admin Panel</title>
+    
+    <!-- Modern AI Club Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
 
     <!-- Firebase Compat SDKs -->
@@ -48,7 +54,7 @@
                 <button class="nav-btn" id="nav-btn-grades" onclick="switchPage('grades')">📊 Gradebook</button>
             </nav>
 
-            <button id="logout-btn" class="btn-logout">Exit System</button>
+            <button id="logout-btn" class="btn-logout">Sign Out</button>
         </header>
 
         <main class="container">
@@ -137,7 +143,7 @@
                             <label>Select Course Module:</label>
                             <select id="attendance-course-select" onchange="renderAttendanceGrid()"></select>
                         </div>
-                        <button class="btn-add-date" onclick="addNewAttendanceDate()">➕ Add Session Date</button>
+                        <button class="btn-add-date" onclick="addNewAttendanceDate()">➕ Add Session / Date</button>
                         <button class="btn-export" onclick="exportTableToCSV('attendance-table', 'Attendance')">📥 Export CSV</button>
                     </div>
 
