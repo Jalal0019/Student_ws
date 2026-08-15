@@ -79,6 +79,9 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
   - **Gradebook tab**: same idea — one row per student, one column per
     assessment (Quiz 1, Midterm, etc., each with its own max score), type
     scores directly into the grid, Total updates automatically.
+  - **Student Profiles tab**: search by name, ID, or email (optionally
+    filter by course), then click "View" on any student to see a full
+    profile — attendance stats and history, and every grade — in one popup.
   - Each "Save" button commits that file straight to the repo.
 - **Student Portal**: now a static page — it does not fetch, store, or
   display any student data, and has no sign-in. Students should be directed

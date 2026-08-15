@@ -750,6 +750,23 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <button class="tab-btn active" data-tab="roster" onclick="switchTab('roster')">Courses &amp; Students</button>
       <button class="tab-btn" data-tab="attendance" onclick="switchTab('attendance')">Attendance</button>
       <button class="tab-btn" data-tab="grades" onclick="switchTab('grades')">Gradebook</button>
+      <button class="tab-btn" data-tab="profiles" onclick="switchTab('profiles')">Student Profiles</button>
+    </div>
+
+    <div class="tab-panel" id="tab-profiles" style="display:none;">
+      <div class="dash-panel">
+        <h2>Student profiles</h2>
+        <div class="field-row">
+          <div><label>Search by name, ID, or email</label><input id="profileSearch" placeholder="Type to search..." oninput="renderProfileList()"></div>
+          <div><label>Filter by course</label><select id="profileCourseFilter" onchange="renderProfileList()"><option value="">All courses</option></select></div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid-table">
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
+            <tbody id="profileList"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="tab-panel" id="tab-roster">
@@ -868,6 +885,23 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <p style="font-size:0.95em;font-weight:700;color:#C62828;margin-bottom:16px;word-break:break-all;" id="deniedEmailModal"></p>
       <p style="font-size:0.88em;color:var(--text-muted);line-height:1.6;margin-bottom:24px;">is not on the approved instructors list.<br>Please contact the <strong style="color:var(--navy);">Club Manager</strong> to request access.</p>
       <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('accessDeniedModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <div id="profileModal" class="center-modal">
+    <div class="center-modal-box" style="max-width:640px; text-align:left;">
+      <button class="tb-popup-close" onclick="document.getElementById('profileModal').classList.remove('open')" style="position:absolute; top:14px; right:18px;">&#10005;</button>
+      <h3 id="profileModalName" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:4px;"></h3>
+      <p id="profileModalMeta" style="font-size:0.85em;color:var(--text-muted);margin-bottom:18px;"></p>
+      <div class="stats-grid" id="profileModalStats" style="margin-bottom:20px;"></div>
+      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Attendance record</h4>
+      <div class="table-wrap" style="margin-bottom:20px; max-height:220px; overflow-y:auto;">
+        <table class="grid-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody id="profileModalAtt"></tbody></table>
+      </div>
+      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Grades</h4>
+      <div class="table-wrap" style="max-height:220px; overflow-y:auto;">
+        <table class="grid-table"><thead><tr><th>Assessment</th><th>Score</th></tr></thead><tbody id="profileModalGrades"></tbody></table>
+      </div>
     </div>
   </div>
 
@@ -1040,7 +1074,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         el.innerHTML = courseSelectOptions();
         if(courses.some(c=>c.code===cur)) el.value = cur;
       });
-      renderAttendance(); renderGrades();
+      const pcf = document.getElementById('profileCourseFilter'); const pcfCur = pcf.value;
+      pcf.innerHTML = '<option value="">All courses</option>' + courseSelectOptions();
+      if(courses.some(c=>c.code===pcfCur)) pcf.value = pcfCur;
+      renderAttendance(); renderGrades(); renderProfileList();
     }
 
     window.addCourse = () => {
@@ -1240,6 +1277,63 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       try{ setStatus('gradeStatus','Saving...'); shas.grades = await ghPut('grades.json', grades, shas.grades, `Update grades ${code}`); setStatus('gradeStatus','Saved.', true); }
       catch(e){ setStatus('gradeStatus', e.message, false); }
+    };
+
+    // ---------- Student profiles ----------
+    function attendanceStatsFor(s){
+      let present=0, absent=0, late=0;
+      const courseAtt = attendance[s.courseCode] || {};
+      Object.values(courseAtt).forEach(day=>{
+        const st = day[s.id];
+        if(!st) return;
+        if(st==='present') present++; else if(st==='absent') absent++; else late++;
+      });
+      const total = present+absent+late;
+      return { present, absent, late, total, pct: total ? Math.round(present*100/total) : null };
+    }
+    window.renderProfileList = () => {
+      const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
+      const courseFilter = document.getElementById('profileCourseFilter').value;
+      const rows = students.filter(s=>{
+        if(courseFilter && s.courseCode !== courseFilter) return false;
+        if(!q) return true;
+        return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
+      });
+      document.getElementById('profileList').innerHTML = rows.map(s=>{
+        const stats = attendanceStatsFor(s);
+        const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
+        return `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
+        <td><button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button></td></tr>`;
+      }).join('') || '<tr><td colspan="6" class="empty-hint">No matching students.</td></tr>';
+    };
+    window.openProfile = (sid) => {
+      const s = students.find(x=>x.id===sid);
+      if(!s) return;
+      const course = courses.find(c=>c.code===s.courseCode);
+      document.getElementById('profileModalName').textContent = s.name;
+      document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name : 'no course'}`;
+
+      const stats = attendanceStatsFor(s);
+      document.getElementById('profileModalStats').innerHTML = `
+        <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${stats.present}</h3><p>Present</p></div></div>
+        <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${stats.absent}</h3><p>Absent</p></div></div>
+        <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${stats.late}</h3><p>Late</p></div></div>
+        <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${stats.pct===null?'—':stats.pct+'%'}</h3><p>Attendance rate</p></div></div>
+      `;
+
+      const courseAtt = attendance[s.courseCode] || {};
+      const attRows = Object.keys(courseAtt).sort().map(date=>{
+        const st = courseAtt[date][s.id];
+        if(!st) return '';
+        return `<tr><td>${date}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
+      }).filter(Boolean).join('');
+      document.getElementById('profileModalAtt').innerHTML = attRows || '<tr><td colspan="2" class="empty-hint">No attendance recorded yet.</td></tr>';
+
+      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
+      const gradeRows = Object.entries(courseGrades).map(([name,v])=>`<tr><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`).join('');
+      document.getElementById('profileModalGrades').innerHTML = gradeRows || '<tr><td colspan="2" class="empty-hint">No grades recorded yet.</td></tr>';
+
+      document.getElementById('profileModal').classList.add('open');
     };
   </script>
 
