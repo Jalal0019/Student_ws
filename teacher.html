@@ -720,18 +720,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     </div>
   </nav>
 
-  <!-- STEP 1: repo details + Google sign-in -->
+  <!-- STEP 1: Google sign-in -->
   <div class="access-gate" id="gate">
     <h1>Instructor access required</h1>
-    <p class="sub">Fill in the repository details, then sign in with an approved Google account (top-right).</p>
-    <div class="dash-panel" style="text-align:left; max-width:440px; margin:0 auto;">
-      <label>Repository owner</label><input id="cfgOwner" placeholder="jalal0019">
-      <label>Repository name</label><input id="cfgRepo" placeholder="Student_ws">
-      <div class="field-row">
-        <div><label>Branch</label><input id="cfgBranch" value="main"></div>
-        <div><label>Data folder</label><input id="cfgPath" value="data"></div>
-      </div>
-    </div>
+    <p class="sub">Sign in with an approved Google account (top-right) to continue.</p>
   </div>
 
   <!-- STEP 2: GitHub token -->
@@ -884,7 +876,9 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     // Put your Google OAuth Client ID here (see README)
     const GOOGLE_CLIENT_ID = "519113872570-v713c1hm9pvsjdt4ccgrb2pm4vptcmsh.apps.googleusercontent.com";
 
-    let cfg = {}, courses = [], students = [], attendance = {}, grades = {};
+    // Fixed repository location — edit here if the repo ever moves
+    const REPO = { owner: 'jalal0019', repo: 'Student_ws', branch: 'main', path: 'data' };
+    let cfg = { ...REPO, token: '' }, courses = [], students = [], attendance = {}, grades = {};
     let shas = { courses: null, students: null, attendance: null, grades: null };
 
     window.onload = function(){
@@ -896,6 +890,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
       }
       document.getElementById('attNewDate').valueAsDate = new Date();
+      tryRestoreSession();
     };
 
     function parseJwt(token){
@@ -905,15 +900,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 
     window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
     window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-    window.tbSignOut = () => { location.reload(); };
+    window.tbSignOut = () => { sessionStorage.removeItem('teacherSession'); location.reload(); };
 
     async function handleGoogleCredential(response){
-      const owner = document.getElementById('cfgOwner').value.trim();
-      const repo = document.getElementById('cfgRepo').value.trim();
-      const branch = document.getElementById('cfgBranch').value.trim() || 'main';
-      const path = document.getElementById('cfgPath').value.trim() || 'data';
+      const { owner, repo, branch, path } = REPO;
       const statusEl = document.getElementById('tbStatus');
-      if(!owner || !repo){ statusEl.textContent = 'Fill in the repository owner and name first.'; return; }
       const payload = parseJwt(response.credential);
       const email = (payload.email || '').toLowerCase();
       if(!payload.email_verified){ statusEl.textContent = 'This Google account has an unverified email.'; return; }
@@ -990,8 +981,46 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         document.getElementById('tokenGate').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         renderRoster();
+        saveSession();
       }catch(e){ setStatus('connectStatus', e.message, false); }
     };
+
+    // ---------- Session persistence (this browser tab only) ----------
+    function saveSession(){
+      const nameEl = document.getElementById('tbName');
+      const avatarEl = document.getElementById('tbAvatar');
+      sessionStorage.setItem('teacherSession', JSON.stringify({
+        token: cfg.token,
+        email: document.getElementById('verifiedEmail').textContent,
+        name: nameEl.textContent,
+        picture: avatarEl.src
+      }));
+    }
+    async function tryRestoreSession(){
+      const raw = sessionStorage.getItem('teacherSession');
+      if(!raw) return;
+      let session;
+      try{ session = JSON.parse(raw); }catch(e){ return; }
+      cfg = { ...REPO, token: session.token };
+      document.getElementById('tbNotSigned').style.display = 'none';
+      document.getElementById('tbSignedIn').style.display = 'flex';
+      document.getElementById('tbAvatar').src = session.picture || '';
+      document.getElementById('tbName').textContent = session.name || session.email;
+      document.getElementById('verifiedEmail').textContent = session.email;
+      document.getElementById('gate').style.display = 'none';
+      try{
+        const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
+        const s = await ghGet('students.json'); students = s.data || []; shas.students = s.sha;
+        const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
+        const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
+        document.getElementById('dashboard').style.display = 'block';
+        renderRoster();
+      }catch(e){
+        // Saved token no longer works — clear it and fall back to sign-in
+        sessionStorage.removeItem('teacherSession');
+        document.getElementById('gate').style.display = 'block';
+      }
+    }
 
     function courseSelectOptions(){
       return courses.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('') || '<option value="">Add a course first</option>';
@@ -1098,12 +1127,21 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('attNewDate').value = '';
       renderAttendance();
     };
+    window.deleteSessionDate = (date) => {
+      const code = document.getElementById('attCourse').value;
+      if(!code || !attendance[code]) return;
+      if(!confirm(`Delete the ${date} session for this course? This removes attendance for all students on that date.`)) return;
+      delete attendance[code][date];
+      renderAttendance();
+    };
     window.renderAttendance = () => {
       const code = document.getElementById('attCourse').value;
       const roster = students.filter(s=>s.courseCode===code);
       const dates = sessionDatesFor(code);
       const head = document.getElementById('attHeadRow');
-      head.innerHTML = '<th class="sticky-col">Student</th>' + dates.map(d=>`<th>${d}</th>`).join('') + '<th>Present</th><th>Absent</th><th>%</th>';
+      head.innerHTML = '<th class="sticky-col">Student</th>' + dates.map(d=>
+        `<th>${d} <button type="button" title="Delete this session" onclick="deleteSessionDate('${d}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`
+      ).join('') + '<th>Present</th><th>Absent</th><th>%</th>';
       if(!roster.length || !dates.length){
         document.getElementById('attBody').innerHTML = `<tr><td colspan="${dates.length+4}" class="empty-hint">${!roster.length?'No students in this course.':'Add a session date to start.'}</td></tr>`;
         return;
@@ -1160,6 +1198,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('gradeNewName').value = '';
       renderGrades();
     };
+    window.deleteAssessmentColumn = (name) => {
+      const code = document.getElementById('gradeCourse').value;
+      if(!code || !grades[code]) return;
+      if(!confirm(`Delete the "${name}" column for this course? This removes that assessment's scores for all students.`)) return;
+      Object.values(grades[code]).forEach(entries => { delete entries[name]; });
+      renderGrades();
+    };
     window.renderGrades = () => {
       const code = document.getElementById('gradeCourse').value;
       const roster = students.filter(s=>s.courseCode===code);
@@ -1167,7 +1212,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const head = document.getElementById('gradeHeadRow');
       head.innerHTML = '<th class="sticky-col">Student</th>' + assessments.map(a=>{
         const max = (grades[code] && roster[0] && grades[code][roster[0].id] && grades[code][roster[0].id][a]) ? grades[code][roster[0].id][a].max : '';
-        return `<th>${a}${max?` (/${max})`:''}</th>`;
+        return `<th>${a}${max?` (/${max})`:''} <button type="button" title="Delete this assessment" onclick="deleteAssessmentColumn('${a.replace(/'/g,"\\'")}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`;
       }).join('') + '<th>Total</th>';
       if(!roster.length || !assessments.length){
         document.getElementById('gradeBody').innerHTML = `<tr><td colspan="${assessments.length+2}" class="empty-hint">${!roster.length?'No students in this course.':'Add an assessment column to start.'}</td></tr>`;

@@ -5,11 +5,28 @@ the Big Data AI Club website exactly (same fonts, colors, header/nav/footer,
 auth top bar). All CSS is embedded directly in each HTML file — no external
 stylesheet to go missing.
 
+## Privacy: student data is instructor-only
+
+`student.html` no longer reads or displays any student data — it now shows a
+static "records are private, contact your instructor" message. The only way
+to see any student's name, email, attendance, or grades is through the
+**Instructor Portal**, after signing in with an approved Google account and
+entering a valid GitHub token.
+
+For this to actually keep the data private (not just hidden from the page),
+**set the `Student_ws` repository to Private** on GitHub:
+Repo → Settings → scroll to "Danger Zone" → "Change repository visibility" → Private.
+
+With the repo private, the Instructor Portal keeps working exactly the same
+(it already authenticates every request with your token), but nobody else —
+no student, no search engine, no random visitor with the URL — can open
+`data/students.json` or any other data file directly.
+
 ## Files
 ```
 index.html       ← portal picker
 teacher.html      ← Instructor Portal (courses, roster, attendance, gradebook)
-student.html       ← Student Portal (read-only self-view)
+student.html       ← private-records notice (no data, no fetch, no sign-in)
 data/
   courses.json     ← [{ code, name }]
   students.json     ← [{ id, name, email, courseCode }]
@@ -24,14 +41,14 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
 
 1. **Upload everything** to your `Student_ws` repo (or wherever it's hosted),
    keeping the `data/` folder as-is relative to the HTML files.
-2. **Create a Google OAuth Client ID** (used for sign-in on both portals):
+2. **Create a Google OAuth Client ID** (used for instructor sign-in):
    - [Google Cloud Console](https://console.cloud.google.com/) → new or
      existing project → **APIs & Services → Credentials → Create Credentials
      → OAuth client ID** → type **Web application**.
    - Under **Authorized JavaScript origins**, add your GitHub Pages URL,
      e.g. `https://jalal0019.github.io`
-   - Copy the Client ID (ends in `.apps.googleusercontent.com`).
-   - Paste it into **both** `teacher.html` and `student.html`, replacing:
+   - Copy the Client ID (ends in `.apps.googleusercontent.com`) and paste it
+     into `teacher.html`, replacing:
      ```js
      const GOOGLE_CLIENT_ID = "PUT_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
      ```
@@ -63,16 +80,22 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
     assessment (Quiz 1, Midterm, etc., each with its own max score), type
     scores directly into the grid, Total updates automatically.
   - Each "Save" button commits that file straight to the repo.
-- **Student Portal**: enter the repo owner/name, sign in with Google → the
-  app looks for your email in `students.json` (added by an instructor when
-  enrolling you) and shows your attendance % and grades, read-only. No
-  match → a "no record found" message, no data shown.
+- **Student Portal**: now a static page — it does not fetch, store, or
+  display any student data, and has no sign-in. Students should be directed
+  to their instructor for any question about their record.
+
+## Session persistence
+Once you sign in and enter your token, the Instructor Portal remembers your
+session for the rest of that browser tab — navigating to Home and back, or
+reloading the page, won't ask you to sign in or re-enter the token again.
+It uses `sessionStorage`, so it's cleared automatically when you close the
+tab (or click "Sign out"), and never persists across different browsers or
+devices.
 
 ## Security note
-Both the instructor-email check and the student lookup happen entirely in
-the browser — they're a UX gate, not real security. Anyone with a GitHub
-token to this repo can write to it regardless of what the page shows; anyone
-who knows a student's email could, in principle, still fetch the public
-`data/*.json` files directly (since the repo is public). If you need
-stronger guarantees than "obscurity + a token you control," a small backend
-would be required — happy to help design that if it becomes necessary.
+The instructor-email check happens in the browser — it's a UX gate, not
+real security by itself. The actual protection is the GitHub token: only
+someone holding a valid token for this repo can read or write `data/*.json`
+once the repo is set to Private (see "Privacy" section above). Keep that
+token private and don't share it — anyone who has it can read or modify all
+student data.

@@ -672,32 +672,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
   </style>
 </head>
 <body>
-  <div class="auth-topbar">
-    <div class="not-signed" id="tbNotSigned">
-      <span>Not signed in</span>
-      <button class="tb-signin-btn" onclick="openSignInPopup()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-        Sign in
-      </button>
-    </div>
-    <div class="signed-in" id="tbSignedIn">
-      <img class="avatar" id="tbAvatar" src="" alt="">
-      <span class="tb-name" id="tbName"></span>
-      <span class="tb-role badge-role badge-student">🎓 Student</span>
-      <button class="tb-signout" onclick="location.reload()">Sign out</button>
-    </div>
-  </div>
-
-  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
-    <div class="tb-popup">
-      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
-      <h3>Student sign-in</h3>
-      <p>Use your university Google account to view your attendance and grades.</p>
-      <div id="googleBtn" style="margin:6px 0 4px;"></div>
-      <div class="status-msg err" id="tbStatus"></div>
-    </div>
-  </div>
-
   <header>
     <div class="logo-container">
       <a href="https://uobaghdad.edu.iq/" target="_blank">
@@ -708,7 +682,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       </a>
     </div>
     <h1><a href="index.html">Student Portal</a></h1>
-    <p>Your attendance &amp; grades — Big Data AI Club</p>
+    <p>Big Data AI Club</p>
   </header>
 
   <nav>
@@ -720,142 +694,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
   </nav>
 
   <div class="access-gate" id="gate">
-    <h1>Sign in to view your record</h1>
-    <p class="sub">Fill in the repository details, then sign in with your university Google account (top-right).</p>
-    <div class="dash-panel" style="text-align:left; max-width:440px; margin:0 auto;">
-      <label>Repository owner</label><input id="cfgOwner" placeholder="jalal0019">
-      <label>Repository name</label><input id="cfgRepo" placeholder="Student_ws">
-      <div class="field-row">
-        <div><label>Branch</label><input id="cfgBranch" value="main"></div>
-        <div><label>Data folder</label><input id="cfgPath" value="data"></div>
-      </div>
-    </div>
+    <h1>Student records are private</h1>
+    <p class="sub">Attendance and grades are managed directly by your instructor and are not published on this site. Please contact your instructor if you have a question about your record.</p>
   </div>
-
-  <main class="dash-main" id="dashboard" style="display:none;">
-    <div class="dash-panel">
-      <h2 id="studentTitle">Your record</h2>
-      <div class="stats-grid" id="summary"></div>
-    </div>
-    <div class="dash-panel">
-      <h2>Attendance record</h2>
-      <div class="table-wrap"><table class="grid-table"><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody id="attBody"></tbody></table></div>
-    </div>
-    <div class="dash-panel">
-      <h2>Grades</h2>
-      <div class="table-wrap"><table class="grid-table"><thead><tr><th>Course</th><th>Assignment</th><th>Score</th></tr></thead><tbody id="gradeBody"></tbody></table></div>
-    </div>
-  </main>
 
   <footer>
     <p>&copy; <span id="footerYear">2026</span> <strong>Big Data Artificial Intelligence Club</strong> | Students Scientific Community</p>
     <p>Big Data Department | College of AI | University of Baghdad</p>
   </footer>
-
-  <div id="notFoundModal" class="center-modal">
-    <div class="center-modal-box">
-      <div style="font-size:3em;margin-bottom:12px;">🔍</div>
-      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">No record found</h3>
-      <p style="font-size:0.9em;color:var(--text-muted);line-height:1.6;margin-bottom:20px;">Your account <strong id="notFoundEmail" style="color:var(--navy);"></strong> is not yet enrolled.<br>Please contact your instructor.</p>
-      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('notFoundModal').classList.remove('open')">Close</button>
-    </div>
-  </div>
-
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    const GOOGLE_CLIENT_ID = "519113872570-v713c1hm9pvsjdt4ccgrb2pm4vptcmsh.apps.googleusercontent.com";
-
-    window.onload = function(){
-      if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-        google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme:'filled_black', shape:'pill', text:'signin_with' });
-      } else {
-        document.getElementById('googleBtn').innerHTML =
-          '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
-      }
-    };
-
-    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
-    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-
-    function parseJwt(token){
-      const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-      return JSON.parse(decodeURIComponent(escape(atob(base64))));
-    }
-
-    async function fetchJSON(owner, repo, branch, path, filename){
-      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/${filename}`;
-      const res = await fetch(url + `?t=${Date.now()}`);
-      if(!res.ok) throw new Error(`Could not load ${filename} (${res.status}). Check the repository is public and the path is correct.`);
-      return res.json();
-    }
-
-    async function handleGoogleCredential(response){
-      const owner = document.getElementById('cfgOwner').value.trim();
-      const repo = document.getElementById('cfgRepo').value.trim();
-      const branch = document.getElementById('cfgBranch').value.trim() || 'main';
-      const path = document.getElementById('cfgPath').value.trim() || 'data';
-      const statusEl = document.getElementById('tbStatus');
-      if(!owner || !repo){ statusEl.textContent = 'Fill in the repository owner and name first.'; return; }
-      const payload = parseJwt(response.credential);
-      if(!payload.email_verified){ statusEl.textContent = 'This Google account has an unverified email.'; return; }
-      const email = (payload.email || '').toLowerCase();
-
-      document.getElementById('tbNotSigned').style.display = 'none';
-      document.getElementById('tbSignedIn').style.display = 'flex';
-      document.getElementById('tbAvatar').src = payload.picture || '';
-      document.getElementById('tbName').textContent = payload.name || email;
-      closeSignInPopup();
-
-      await loadRecord(owner, repo, branch, path, email);
-    }
-
-    async function loadRecord(owner, repo, branch, path, email){
-      try{
-        const [courses, students, attendance, grades] = await Promise.all([
-          fetchJSON(owner, repo, branch, path, 'courses.json'),
-          fetchJSON(owner, repo, branch, path, 'students.json'),
-          fetchJSON(owner, repo, branch, path, 'attendance.json'),
-          fetchJSON(owner, repo, branch, path, 'grades.json'),
-        ]);
-        const student = students.find(s=>(s.email||'').toLowerCase()===email);
-        if(!student){
-          document.getElementById('notFoundEmail').textContent = email;
-          document.getElementById('notFoundModal').classList.add('open');
-          return;
-        }
-        document.getElementById('gate').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-
-        const course = courses.find(c=>c.code===student.courseCode) || {code:student.courseCode, name:''};
-        document.getElementById('studentTitle').textContent = `${student.name} — ${student.id}`;
-
-        let present=0, absent=0, late=0, attRows='';
-        const dayMap = attendance[student.courseCode] || {};
-        Object.keys(dayMap).sort().forEach(date=>{
-          const st = dayMap[date][student.id];
-          if(!st) return;
-          if(st==='present') present++; else if(st==='absent') absent++; else if(st==='late') late++;
-          attRows += `<tr><td>${date}</td><td>${course.code}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
-        });
-        document.getElementById('attBody').innerHTML = attRows || '<tr><td colspan="3" class="empty-hint">No records yet.</td></tr>';
-
-        const total = present+absent+late;
-        document.getElementById('summary').innerHTML = `
-          <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${present}</h3><p>Present</p></div></div>
-          <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${absent}</h3><p>Absent</p></div></div>
-          <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${late}</h3><p>Late</p></div></div>
-          <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${total? Math.round(present*100/total):0}%</h3><p>Attendance rate</p></div></div>
-        `;
-
-        const entries = (grades[student.courseCode] && grades[student.courseCode][student.id]) || {};
-        const gradeRows = Object.entries(entries).map(([name,v])=>`<tr><td>${course.code}</td><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`).join('');
-        document.getElementById('gradeBody').innerHTML = gradeRows || '<tr><td colspan="3" class="empty-hint">No grades recorded yet.</td></tr>';
-      }catch(e){
-        document.getElementById('tbStatus').textContent = e.message;
-      }
-    }
-  </script>
 
   <script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
 </body>
