@@ -1,72 +1,77 @@
-# نظام الحضور والدرجات — نادي البيانات الضخمة
+# Attendance & Grades System — Big Data AI Club edition
 
-نظام ويب ثابت (Static) بدون خادم خلفي: البيانات تُخزَّن كملفات JSON داخل مستودع GitHub، والواجهة تتعامل معها مباشرة عبر GitHub API.
+This version is restyled to match the club website exactly (same fonts, colors,
+header/nav/footer, auth top bar, and access-denied modal), and uses the **same
+Firebase project** (`bigdataaiclub`) and the **same `approved-users.js`** role
+file already hosted on the club's GitHub Pages site — so instructor access is
+managed in one place.
 
-## هيكل الملفات
+## Files
 ```
-attendance-system/
-├── index.html      ← الصفحة الرئيسية (اختيار البوابة)
-├── teacher.html     ← بوابة الأستاذ (قراءة/كتابة عبر GitHub API)
-├── student.html      ← بوابة الطالب (قراءة فقط عبر raw.githubusercontent.com)
-└── data/
-    ├── students.json
-    ├── subjects.json
-    ├── instructors.json
-    ├── attendance.json
-    └── grades.json
+index.html      ← portal picker
+teacher.html     ← Instructor Portal (courses, roster, attendance, gradebook)
+student.html      ← Student Portal (read-only self-view)
+style.css        ← the club site's own stylesheet (copied as-is)
+dashboard.css     ← extra components (tables, tabs, stat cards) using the same
+                     design tokens (--navy, --indigo, --gold, etc.)
+logo3.png, coai-english-logo.png, favicon.png ← club branding assets
 ```
 
-## خطوات الإعداد
+## How access works
 
-1. **أنشئ مستودع GitHub جديد** (يفضّل أن يكون Public حتى تعمل بوابة الطالب بدون توكن، أو Private إذا أردت خصوصية كاملة — لكن حينها ستحتاج بوابة الطالب أيضاً إلى تعديل بسيط لاستخدام API بدلاً من raw، أو نشر عبر GitHub Pages).
-2. ارفع محتوى هذا المجلد بالكامل إلى المستودع (يمكنك استخدام GitHub Desktop أو `git push` أو السحب المباشر في واجهة GitHub).
-3. فعّل **GitHub Pages** من إعدادات المستودع (Settings → Pages) واختر الفرع `main` والمجلد الجذري، لتحصل على رابط عام للموقع.
-4. **أنشئ Google OAuth Client ID** (لتفعيل تسجيل الدخول بحساب Google في كلا البوابتين):
-   - افتح [Google Cloud Console](https://console.cloud.google.com/) → أنشئ مشروعاً جديداً (أو استخدم موجوداً).
-   - من قائمة **APIs & Services → Credentials** اضغط **Create Credentials → OAuth client ID**.
-   - نوع التطبيق: **Web application**.
-   - في **Authorized JavaScript origins** أضف رابط موقعك على GitHub Pages، مثلاً: `https://jalal-username.github.io`
-   - انسخ **Client ID** الناتج (ينتهي بـ `.apps.googleusercontent.com`).
-   - افتح كلا الملفين `teacher.html` و`student.html`، وضع الـ Client ID مكان `PUT_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com` في السطر:
-     ```js
-     const GOOGLE_CLIENT_ID = "...apps.googleusercontent.com";
-     ```
-   - إذا كانت جامعتكم تستخدم Google Workspace، يفضّل تقييد الدخول لنطاق الجامعة فقط من إعدادات شاشة الموافقة (OAuth consent screen → Internal، أو Restrict به hd parameter).
-5. **أضف الأساتذة المخوّلين** في ملف `data/instructors.json` يدوياً عبر واجهة GitHub (أو من جهازك قبل الرفع):
-   ```json
-   [ { "name": "د. جلال حميد", "email": "jalal.hameed@uobaghdad.edu.iq" } ]
+- **Instructor Portal**: on sign-in, the app checks the visitor's email against
+  `APPROVED_USERS` in `approved-users.js` (loaded live from the club's repo).
+  Only emails with role `admin` or `professor` get in. Everyone else sees the
+  same "Access Denied" modal used on the club site.
+- **Student Portal**: any signed-in Google account can attempt to view a
+  record, but the app only shows data if that exact email exists in the
+  `students` Firestore collection (added by an instructor when enrolling
+  them). No email → "No record found" message, no data shown.
+
+## One-time setup
+
+1. **Deploy these files** to a GitHub Pages site (can be a new repo, or a
+   subfolder of an existing one, e.g. `https://jalal0019.github.io/attendance/`).
+2. **Add instructors** by editing `approved-users.js` in the
+   `Big_Data_AI_Club_Baghdad` repo (already contains your admin email):
+   ```js
+   var APPROVED_USERS = {
+     "jalal.hameed@uobaghdad.edu.iq": "admin",
+     "some.professor@uobaghdad.edu.iq": "professor",
+   };
    ```
-   هذا الملف هو الذي يحدد من يُسمح له بالدخول إلى `teacher.html` كأستاذ — يجب أن يطابق البريد المسجَّل في حساب Google المستخدم لتسجيل الدخول.
-6. **أنشئ Personal Access Token (PAT)** جديد من حسابك:
-   - GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
-   - امنحه صلاحية **Contents: Read and write** على هذا المستودع فقط.
-   - **لا تشارك هذا التوكن مع أحد ولا تضعه داخل الكود مباشرة.**
-7. افتح `teacher.html`:
-   - **الخطوة الأولى**: أدخل owner/repo، ثم اضغط زر "الدخول بحساب Google" واختر حسابك الجامعي — يتحقق النظام تلقائياً من وجود بريدك في `instructors.json`.
-   - **الخطوة الثانية**: بعد التحقق، أدخل التوكن لتفعيل صلاحية الحفظ.
-   - التوكن يُخزَّن مؤقتاً في `sessionStorage` (ذاكرة المتصفح للجلسة الحالية فقط) ولا يُرسل لأي جهة سوى GitHub API مباشرة.
-   - يمكنك مسحه يدوياً بزر "مسح التوكن من الجلسة" بعد الانتهاء، أو ببساطة إغلاق التبويب.
-8. الطلبة يفتحون `student.html`، يدخلون owner/repo، ثم يسجّلون الدخول بحساب Google الجامعي الخاص بهم لعرض سجلّهم مباشرة (بدون توكن). يجب أن يكون بريد حساب Google الخاص بهم مسجَّلاً مسبقاً في `students.json` من قبل الأستاذ (تبويب "الطلبة" في `teacher.html`).
+   This file is shared with the main club website, so adding a professor here
+   also gives them whatever the club site already grants that role.
+3. **Check Firestore security rules** in the `bigdataaiclub` Firebase project
+   (console.firebase.google.com → Firestore → Rules). At minimum you need:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /courses/{id}   { allow read, write: if request.auth != null; }
+       match /students/{id}  { allow read, write: if request.auth != null; }
+       match /attendance/{id}{ allow read, write: if request.auth != null; }
+       match /grades/{id}    { allow read, write: if request.auth != null; }
+     }
+   }
+   ```
+   This lets any signed-in Google user *read* (needed for the student
+   self-view) but you may want to tighten `write` to admin/professor-only
+   using a Firestore rule that checks a server-side roles collection, since
+   client-side role checks (like the ones in `teacher.html`) are only a UI
+   convenience, not real security. Let me know if you'd like help writing
+   stricter rules.
+4. Open `index.html`, choose a portal, and sign in with Google.
 
-### ملاحظة حول الدخول بـ Google
-هذه طريقة تسجيل دخول حقيقية (OAuth عبر Google)، أقوى بكثير من كتابة بريد يدوياً: بريد المستخدم يأتي موقّعاً من Google نفسها ولا يمكن انتحاله بمجرد معرفة البريد. مع ذلك، الحماية النهائية لصلاحية **الكتابة** (حفظ الحضور والدرجات) تبقى التوكن — فحتى لو دخل أستاذ مخوّل بحسابه، لا يمكنه الحفظ فعلياً بدون توكن صالح لهذا المستودع تحديداً.
+## Data model (Firestore)
+- `courses/{id}`: `{ code, title }`
+- `students/{id}`: `{ studentId, name, email, courseId }`
+- `attendance/{courseId_date}`: `{ courseId, date, statuses: { studentDocId: "present"|"absent"|"late" } }`
+- `grades/{courseId}`: `{ courseId, entries: { studentDocId: { assignmentName: { score, max } } } }`
 
-## ملاحظات أمان مهمة
-- **لا تضع التوكن داخل أي ملف HTML/JS يُرفع إلى GitHub.** يُدخل يدوياً من المتصفح في كل مرة.
-- إذا أردت منع الطلبة من رؤية بعضهم البعض، تأكد أن `student.html` لا يعرض سوى سجل الطالب المطابق للرقم المدخل (وهذا مطبّق حالياً في الكود).
-- لإخفاء البيانات تماماً عن الزوار غير المصرح لهم، اجعل المستودع **Private** واستضف الموقع عبر خدمة تدعم استدعاء GitHub API بتوكن قراءة محدود الصلاحية (Read-only) بدلاً من رابط raw العام — أخبرني إن أردت هذا الإعداد الأكثر تحفظاً وسأعدّل `student.html` وفق ذلك.
-
-## استخدام الأستاذ للنظام
-بعد الاتصال بـ `teacher.html`، التبويبات الأربعة:
-1. **المواد**: أضف كل مادة تدرّسها برمز واسم (مثل `AICI201` — برمجة كائنية التوجه)، ثم احفظ.
-2. **الحضور**: اختر المادة والتاريخ، حدد حالة كل طالب (حاضر/غائب/متأخر)، ثم احفظ. يمكنك تسجيل حضور لأكثر من مادة في نفس اليوم بشكل منفصل.
-3. **الدرجات**: اختر المادة، اكتب اسم التقييم (امتحان، واجب، مشروع...) والدرجة العظمى، أدخل درجة كل طالب، ثم احفظ. كل تقييم يُضاف دون حذف التقييمات السابقة لنفس المادة.
-4. **الطلبة**: أضف طالباً جديداً بالمعرّف والاسم والإيميل الجامعي، ثم احفظ.
-
-كل عملية "حفظ" تُنشئ commit جديد مباشرة في المستودع.
-
-## البيانات
-- `students.json`: `[{ "id": "...", "name": "...", "email": "..." }]`
-- `subjects.json`: `[{ "code": "AICI201", "name": "..." }]`
-- `attendance.json`: `{ "AICI201": { "2026-08-14": { "20231001": "present" | "absent" | "late" } } }`
-- `grades.json`: `{ "AICI201": { "20231001": { "امتحان أول": { "score": 90, "max": 100 } } } }`
+## Notes
+- The Instructor Portal role check happens in the browser, same as the club
+  site's pattern — good enough to keep casual visitors out, but a determined
+  user could bypass the UI. Real protection is the Firestore rules above.
+- If you'd rather instructors only see courses they teach (not all courses),
+  I can add a `ownerEmail` field to courses and filter — just ask.

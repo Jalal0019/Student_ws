@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Portal — Big Data AI Club</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>nav a[href="student.html"] { color:#fff; } nav a[href="student.html"]::after { transform:scaleX(1); }</style>
+</head>
+<body>
+  <!-- AUTH TOP BAR -->
+  <div class="auth-topbar">
+    <div class="not-signed" id="tbNotSigned">
+      <span>Not signed in</span>
+      <button class="tb-signin-btn" onclick="openSignInPopup()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+        Sign in
+      </button>
+    </div>
+    <div class="signed-in" id="tbSignedIn">
+      <img class="avatar" id="tbAvatar" src="" alt="">
+      <span class="tb-name" id="tbName"></span>
+      <span class="tb-role" id="tbRole"></span>
+      <button class="tb-signout" onclick="tbSignOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
+    <div class="tb-popup">
+      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
+      <h3>Student sign-in</h3>
+      <p>Use your university Google account to view your attendance and grades.</p>
+      <div class="tb-spinner" id="tbSpinner"></div>
+      <button class="tb-google-btn" id="tbGoogleBtn" onclick="tbSignIn()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Sign in with Google
+      </button>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo-container">
+      <a href="https://uobaghdad.edu.iq/" target="_blank">
+        <img src="logo3.png" alt="University of Baghdad Logo" class="club-logo" style="height:65px;width:65px;object-fit:contain;">
+      </a>
+      <a href="https://en.coai.uobaghdad.edu.iq/" target="_blank">
+        <img src="coai-english-logo.png" alt="College of AI Logo" class="club-logo" style="height:80px;width:auto;object-fit:contain;">
+      </a>
+    </div>
+    <h1><a href="index.html">Student Portal</a></h1>
+    <p>Your attendance &amp; grades — Big Data AI Club</p>
+  </header>
+
+  <nav>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="teacher.html">Instructor</a>
+      <a href="student.html">Student</a>
+    </div>
+  </nav>
+
+  <div class="access-gate" id="gate">
+    <h1>Sign in to view your record</h1>
+    <p class="sub">Sign in with your university Google account (top-right). Your email must be enrolled by an instructor first.</p>
+  </div>
+
+  <main class="dash-main" id="dashboard" style="display:none;">
+    <div class="dash-panel">
+      <h2 id="studentTitle">Your record</h2>
+      <div class="stats-grid" id="summary"></div>
+    </div>
+    <div class="dash-panel">
+      <h2>Attendance record</h2>
+      <div class="table-wrap">
+        <table class="grid-table"><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody id="attBody"></tbody></table>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Grades</h2>
+      <div class="table-wrap">
+        <table class="grid-table"><thead><tr><th>Course</th><th>Assignment</th><th>Score</th></tr></thead><tbody id="gradeBody"></tbody></table>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="footerYear">2026</span> <strong>Big Data Artificial Intelligence Club</strong> | Students Scientific Community</p>
+    <p>Big Data Department | College of AI | University of Baghdad</p>
+  </footer>
+
+  <div id="notEnrolledModal" class="center-modal">
+    <div class="center-modal-box">
+      <div style="font-size:3em;margin-bottom:12px;">🔍</div>
+      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">No record found</h3>
+      <p style="font-size:0.9em;color:var(--text-muted);line-height:1.6;margin-bottom:20px;">Your account <strong id="notEnrolledEmail" style="color:var(--navy);"></strong> is not yet enrolled in any course.<br>Please contact your instructor.</p>
+      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('notEnrolledModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut as fbSignOut, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, collection, getDocs, query, where }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyArF59_11UVHPo9yZW5zg2RYQWaKjIZXYw",
+      authDomain: "bigdataaiclub.firebaseapp.com",
+      projectId: "bigdataaiclub",
+      storageBucket: "bigdataaiclub.firebasestorage.app",
+      messagingSenderId: "877020220761",
+      appId: "1:877020220761:web:6c6dcc22b63fcd2ec15048"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
+    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
+    window.tbSignIn = () => {
+      document.getElementById('tbSpinner').style.display = 'block';
+      document.getElementById('tbGoogleBtn').style.display = 'none';
+      signInWithPopup(auth, provider)
+        .then(() => closeSignInPopup())
+        .catch(() => {
+          document.getElementById('tbSpinner').style.display = 'none';
+          document.getElementById('tbGoogleBtn').style.display = 'flex';
+        });
+    };
+    window.tbSignOut = () => fbSignOut(auth);
+
+    function showSignedIn(user){
+      document.getElementById('tbNotSigned').style.display = 'none';
+      const si = document.getElementById('tbSignedIn');
+      si.style.display = 'flex';
+      document.getElementById('tbAvatar').src = user.photoURL || '';
+      document.getElementById('tbName').textContent = user.displayName || user.email;
+      const roleEl = document.getElementById('tbRole');
+      roleEl.textContent = '🎓 Student';
+      roleEl.className = 'tb-role badge-role badge-student';
+    }
+    function showSignedOut(){
+      document.getElementById('tbNotSigned').style.display = 'flex';
+      document.getElementById('tbSignedIn').style.display = 'none';
+      document.getElementById('gate').style.display = 'block';
+      document.getElementById('dashboard').style.display = 'none';
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if(user){
+        showSignedIn(user);
+        await loadRecord(user.email.toLowerCase());
+      } else {
+        showSignedOut();
+      }
+    });
+
+    async function loadRecord(email){
+      const studentsSnap = await getDocs(query(collection(db,'students'), where('email','==', email)));
+      if(studentsSnap.empty){
+        document.getElementById('gate').style.display = 'block';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('notEnrolledEmail').textContent = email;
+        document.getElementById('notEnrolledModal').classList.add('open');
+        return;
+      }
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+
+      const coursesSnap = await getDocs(collection(db,'courses'));
+      const courses = {}; coursesSnap.forEach(d=>courses[d.id]={id:d.id, ...d.data()});
+
+      const attSnap = await getDocs(collection(db,'attendance'));
+      const gradesSnap = await getDocs(collection(db,'grades'));
+
+      let present=0, absent=0, late=0, attRows='', gradeRows='';
+      const myRecords = studentsSnap.docs.map(d=>({id:d.id, ...d.data()}));
+      document.getElementById('studentTitle').textContent = `${myRecords[0].name} — ${myRecords[0].studentId}`;
+
+      myRecords.forEach(rec=>{
+        const course = courses[rec.courseId] || {code:'—', title:''};
+        attSnap.forEach(d=>{
+          const a = d.data();
+          if(a.courseId !== rec.courseId) return;
+          const st = a.statuses && a.statuses[rec.id];
+          if(!st) return;
+          if(st==='present') present++; else if(st==='absent') absent++; else if(st==='late') late++;
+          attRows += `<tr><td>${a.date}</td><td>${course.code}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
+        });
+        gradesSnap.forEach(d=>{
+          const g = d.data();
+          if(g.courseId !== rec.courseId) return;
+          const entries = (g.entries && g.entries[rec.id]) || {};
+          Object.entries(entries).forEach(([name, v])=>{
+            gradeRows += `<tr><td>${course.code}</td><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`;
+          });
+        });
+      });
+
+      document.getElementById('attBody').innerHTML = attRows || '<tr><td colspan="3" class="empty-hint">No records yet.</td></tr>';
+      document.getElementById('gradeBody').innerHTML = gradeRows || '<tr><td colspan="3" class="empty-hint">No grades recorded yet.</td></tr>';
+
+      const total = present+absent+late;
+      document.getElementById('summary').innerHTML = `
+        <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${present}</h3><p>Present</p></div></div>
+        <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${absent}</h3><p>Absent</p></div></div>
+        <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${late}</h3><p>Late</p></div></div>
+        <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${total? Math.round(present*100/total):0}%</h3><p>Attendance rate</p></div></div>
+      `;
+    }
+  </script>
+
+  <script>
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

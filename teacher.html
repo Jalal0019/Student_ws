@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Instructor Portal — Big Data AI Club</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>nav a[href="teacher.html"] { color:#fff; } nav a[href="teacher.html"]::after { transform:scaleX(1); }</style>
+</head>
+<body>
+  <!-- AUTH TOP BAR -->
+  <div class="auth-topbar">
+    <div class="not-signed" id="tbNotSigned">
+      <span>Not signed in</span>
+      <button class="tb-signin-btn" onclick="openSignInPopup()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+        Sign in
+      </button>
+    </div>
+    <div class="signed-in" id="tbSignedIn">
+      <img class="avatar" id="tbAvatar" src="" alt="">
+      <span class="tb-name" id="tbName"></span>
+      <span class="tb-role" id="tbRole"></span>
+      <button class="tb-signout" onclick="tbSignOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
+    <div class="tb-popup">
+      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
+      <h3>Instructor sign-in</h3>
+      <p>Use your approved Google account to manage courses, attendance, and grades.</p>
+      <div class="tb-spinner" id="tbSpinner"></div>
+      <button class="tb-google-btn" id="tbGoogleBtn" onclick="tbSignIn()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Sign in with Google
+      </button>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo-container">
+      <a href="https://uobaghdad.edu.iq/" target="_blank">
+        <img src="logo3.png" alt="University of Baghdad Logo" class="club-logo" style="height:65px;width:65px;object-fit:contain;">
+      </a>
+      <a href="https://en.coai.uobaghdad.edu.iq/" target="_blank">
+        <img src="coai-english-logo.png" alt="College of AI Logo" class="club-logo" style="height:80px;width:auto;object-fit:contain;">
+      </a>
+    </div>
+    <h1><a href="index.html">Instructor Portal</a></h1>
+    <p>Courses, Attendance &amp; Gradebook — Big Data AI Club</p>
+  </header>
+
+  <nav>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="teacher.html">Instructor</a>
+      <a href="student.html">Student</a>
+    </div>
+  </nav>
+
+  <!-- GATE: shown until an authorized instructor signs in -->
+  <div class="access-gate" id="gate">
+    <h1>Instructor access required</h1>
+    <p class="sub">Sign in with an approved Google account (top-right) to open the dashboard.</p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <main class="dash-main hidden" id="dashboard" style="display:none;">
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📖</div>
+        <div><h3 id="statCourses">0</h3><p>Courses</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div><h3 id="statStudents">0</h3><p>Students</p></div>
+      </div>
+    </div>
+
+    <div class="tabs-row">
+      <button class="tab-btn active" data-tab="roster" onclick="switchTab('roster')">Courses &amp; Students</button>
+      <button class="tab-btn" data-tab="attendance" onclick="switchTab('attendance')">Attendance</button>
+      <button class="tab-btn" data-tab="grades" onclick="switchTab('grades')">Gradebook</button>
+    </div>
+
+    <!-- TAB: Roster -->
+    <div class="tab-panel" id="tab-roster">
+      <div class="grid-2">
+        <div class="dash-panel">
+          <h2>Create course</h2>
+          <div class="field-row">
+            <div><label>Course code</label><input id="courseCode" placeholder="AICI201"></div>
+            <div><label>Course title</label><input id="courseName" placeholder="Object-Oriented Programming"></div>
+          </div>
+          <button class="btn btn-primary" onclick="addCourse()">Add course</button>
+          <div class="status-msg" id="courseStatus"></div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table class="grid-table">
+              <thead><tr><th>Code</th><th>Title</th><th></th></tr></thead>
+              <tbody id="coursesList"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="dash-panel">
+          <h2>Enroll student</h2>
+          <div class="field-row">
+            <div><label>Student ID</label><input id="studentId" placeholder="20231045"></div>
+            <div><label>Full name</label><input id="studentName" placeholder="Student name"></div>
+          </div>
+          <div class="field-row">
+            <div><label>University email (sign-in identity)</label><input id="studentEmail" type="email" placeholder="name@uobaghdad.edu.iq"></div>
+            <div><label>Course</label><select id="studentCourse"></select></div>
+          </div>
+          <button class="btn btn-primary" onclick="addStudent()">Enroll student</button>
+          <div class="status-msg" id="studentStatus"></div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table class="grid-table">
+              <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th></th></tr></thead>
+              <tbody id="studentsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Attendance -->
+    <div class="tab-panel" id="tab-attendance" style="display:none;">
+      <div class="dash-panel">
+        <h2>Record attendance</h2>
+        <div class="field-row">
+          <div><label>Course</label><select id="attCourse" onchange="renderAttendance()"></select></div>
+          <div><label>Date</label><input id="attDate" type="date" onchange="renderAttendance()"></div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid-table" id="attTable">
+            <thead><tr><th>Student</th><th>Status</th></tr></thead>
+            <tbody id="attBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px;" onclick="saveAttendance()">Save attendance</button>
+        <div class="status-msg" id="attStatus"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Grades -->
+    <div class="tab-panel" id="tab-grades" style="display:none;">
+      <div class="dash-panel">
+        <h2>Gradebook</h2>
+        <div class="field-row">
+          <div><label>Course</label><select id="gradeCourse" onchange="renderGrades()"></select></div>
+          <div><label>Assignment name</label><input id="gradeAssignment" placeholder="Midterm exam"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Maximum score</label><input id="gradeMax" type="number" value="100"></div>
+          <div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid-table" id="gradeTable">
+            <thead><tr><th>Student</th><th>Score</th></tr></thead>
+            <tbody id="gradeBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px;" onclick="saveGrades()">Save grades</button>
+        <div class="status-msg" id="gradeStatus"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>&copy; <span id="footerYear">2026</span> <strong>Big Data Artificial Intelligence Club</strong> | Students Scientific Community</p>
+    <p>Big Data Department | College of AI | University of Baghdad</p>
+  </footer>
+
+  <!-- Access Denied Modal -->
+  <div id="accessDeniedModal" class="center-modal">
+    <div class="center-modal-box">
+      <div style="font-size:3em;margin-bottom:12px;">&#128683;</div>
+      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">Access Denied</h3>
+      <p style="font-size:0.92em;color:var(--text-muted);margin-bottom:6px;">Your account</p>
+      <p style="font-size:0.95em;font-weight:700;color:#C62828;margin-bottom:16px;word-break:break-all;" id="deniedEmailModal"></p>
+      <p style="font-size:0.88em;color:var(--text-muted);line-height:1.6;margin-bottom:24px;">is not approved for the Instructor Portal.<br>Please contact the <strong style="color:var(--navy);">Club Manager</strong> to request access.</p>
+      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('accessDeniedModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut as fbSignOut, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, query }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    // Same Firebase project as the club website
+    const firebaseConfig = {
+      apiKey: "AIzaSyArF59_11UVHPo9yZW5zg2RYQWaKjIZXYw",
+      authDomain: "bigdataaiclub.firebaseapp.com",
+      projectId: "bigdataaiclub",
+      storageBucket: "bigdataaiclub.firebasestorage.app",
+      messagingSenderId: "877020220761",
+      appId: "1:877020220761:web:6c6dcc22b63fcd2ec15048"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // Roles allowed to use this portal
+    const ALLOWED_ROLES = ['admin', 'professor'];
+
+    const ROLE_CONFIG = {
+      admin:     { label: '⚙️ Admin',     cls: 'badge-admin' },
+      professor: { label: '📘 Professor', cls: 'badge-professor' },
+    };
+
+    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
+    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
+    window.tbSignIn = () => {
+      document.getElementById('tbSpinner').style.display = 'block';
+      document.getElementById('tbGoogleBtn').style.display = 'none';
+      signInWithPopup(auth, provider)
+        .then(() => closeSignInPopup())
+        .catch(() => {
+          document.getElementById('tbSpinner').style.display = 'none';
+          document.getElementById('tbGoogleBtn').style.display = 'flex';
+        });
+    };
+    window.tbSignOut = () => fbSignOut(auth);
+
+    function showSignedIn(user, role){
+      document.getElementById('tbNotSigned').style.display = 'none';
+      const si = document.getElementById('tbSignedIn');
+      si.style.display = 'flex';
+      document.getElementById('tbAvatar').src = user.photoURL || '';
+      document.getElementById('tbName').textContent = user.displayName || user.email;
+      const cfg = ROLE_CONFIG[role] || { label: role, cls: '' };
+      const roleEl = document.getElementById('tbRole');
+      roleEl.textContent = cfg.label;
+      roleEl.className = 'tb-role badge-role ' + cfg.cls;
+    }
+    function showSignedOut(){
+      document.getElementById('tbNotSigned').style.display = 'flex';
+      document.getElementById('tbSignedIn').style.display = 'none';
+      document.getElementById('gate').style.display = 'block';
+      document.getElementById('dashboard').style.display = 'none';
+    }
+
+    onAuthStateChanged(auth, user => {
+      if(user){
+        const role = window.APPROVED_USERS ? window.APPROVED_USERS[user.email] : null;
+        if(role && ALLOWED_ROLES.includes(role)){
+          showSignedIn(user, role);
+          document.getElementById('gate').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          startListeners();
+        } else {
+          showSignedOut();
+          document.getElementById('deniedEmailModal').textContent = user.email;
+          document.getElementById('accessDeniedModal').classList.add('open');
+          fbSignOut(auth);
+        }
+      } else {
+        showSignedOut();
+      }
+    });
+
+    // ---------- Data state ----------
+    let courses = [], students = [], attendance = {}, grades = {};
+    let unsub = [];
+
+    function startListeners(){
+      unsub.forEach(u=>u());
+      unsub = [];
+      unsub.push(onSnapshot(collection(db,'courses'), snap=>{
+        courses = []; snap.forEach(d=>courses.push({id:d.id, ...d.data()}));
+        renderRoster();
+      }));
+      unsub.push(onSnapshot(collection(db,'students'), snap=>{
+        students = []; snap.forEach(d=>students.push({id:d.id, ...d.data()}));
+        renderRoster();
+      }));
+      unsub.push(onSnapshot(collection(db,'attendance'), snap=>{
+        attendance = {}; snap.forEach(d=>attendance[d.id]=d.data());
+        renderAttendance();
+      }));
+      unsub.push(onSnapshot(collection(db,'grades'), snap=>{
+        grades = {}; snap.forEach(d=>grades[d.id]=d.data());
+        renderGrades();
+      }));
+    }
+
+    window.switchTab = (name) => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = 'none');
+      document.getElementById('tab-'+name).style.display = 'block';
+    };
+
+    function courseSelectOptions(){
+      return courses.map(c=>`<option value="${c.id}">${c.code} — ${c.title}</option>`).join('') || '<option value="">Add a course first</option>';
+    }
+
+    function renderRoster(){
+      document.getElementById('statCourses').textContent = courses.length;
+      document.getElementById('statStudents').textContent = students.length;
+
+      document.getElementById('coursesList').innerHTML = courses.map(c=>`
+        <tr><td>${c.code}</td><td>${c.title}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteCourse('${c.id}')">Delete</button></td></tr>`).join('')
+        || '<tr><td colspan="3" class="empty-hint">No courses yet.</td></tr>';
+
+      document.getElementById('studentsList').innerHTML = students.map(s=>{
+        const c = courses.find(c=>c.id===s.courseId);
+        return `<tr><td>${s.studentId}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${c?c.code:'—'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
+      }).join('') || '<tr><td colspan="5" class="empty-hint">No students enrolled yet.</td></tr>';
+
+      ['studentCourse','attCourse','gradeCourse'].forEach(id=>{
+        const el = document.getElementById(id);
+        const cur = el.value;
+        el.innerHTML = courseSelectOptions();
+        if(courses.some(c=>c.id===cur)) el.value = cur;
+      });
+      renderAttendance(); renderGrades();
+    }
+
+    window.addCourse = async () => {
+      const code = document.getElementById('courseCode').value.trim();
+      const title = document.getElementById('courseName').value.trim();
+      const statusEl = document.getElementById('courseStatus');
+      if(!code || !title){ statusEl.textContent='Please fill in both fields.'; statusEl.className='status-msg err'; return; }
+      try{
+        await addDoc(collection(db,'courses'), { code, title });
+        document.getElementById('courseCode').value=''; document.getElementById('courseName').value='';
+        statusEl.textContent='Course added.'; statusEl.className='status-msg ok';
+      }catch(e){ statusEl.textContent=e.message; statusEl.className='status-msg err'; }
+    };
+    window.deleteCourse = async (id) => { await deleteDoc(doc(db,'courses',id)); };
+
+    window.addStudent = async () => {
+      const studentId = document.getElementById('studentId').value.trim();
+      const name = document.getElementById('studentName').value.trim();
+      const email = document.getElementById('studentEmail').value.trim().toLowerCase();
+      const courseId = document.getElementById('studentCourse').value;
+      const statusEl = document.getElementById('studentStatus');
+      if(!studentId || !name || !email || !courseId){ statusEl.textContent='Please fill in all fields.'; statusEl.className='status-msg err'; return; }
+      try{
+        await addDoc(collection(db,'students'), { studentId, name, email, courseId });
+        document.getElementById('studentId').value=''; document.getElementById('studentName').value=''; document.getElementById('studentEmail').value='';
+        statusEl.textContent='Student enrolled.'; statusEl.className='status-msg ok';
+      }catch(e){ statusEl.textContent=e.message; statusEl.className='status-msg err'; }
+    };
+    window.deleteStudent = async (id) => { await deleteDoc(doc(db,'students',id)); };
+
+    // ---------- Attendance ----------
+    window.renderAttendance = () => {
+      const courseId = document.getElementById('attCourse').value;
+      const date = document.getElementById('attDate').value;
+      const roster = students.filter(s=>s.courseId===courseId);
+      const key = courseId + '_' + date;
+      const record = (attendance[key] && attendance[key].statuses) || {};
+      document.getElementById('attBody').innerHTML = roster.map(s=>{
+        const cur = record[s.id] || 'present';
+        return `<tr><td>${s.name} <small style="color:var(--text-muted)">(${s.studentId})</small></td>
+        <td><select data-sid="${s.id}" class="attSelect">
+          <option value="present" ${cur==='present'?'selected':''}>Present</option>
+          <option value="absent" ${cur==='absent'?'selected':''}>Absent</option>
+          <option value="late" ${cur==='late'?'selected':''}>Late</option>
+        </select></td></tr>`;
+      }).join('') || '<tr><td colspan="2" class="empty-hint">No students in this course.</td></tr>';
+    };
+    window.saveAttendance = async () => {
+      const courseId = document.getElementById('attCourse').value;
+      const date = document.getElementById('attDate').value;
+      const statusEl = document.getElementById('attStatus');
+      if(!courseId || !date){ statusEl.textContent='Choose a course and date.'; statusEl.className='status-msg err'; return; }
+      const statuses = {};
+      document.querySelectorAll('.attSelect').forEach(sel=>{ statuses[sel.dataset.sid] = sel.value; });
+      try{
+        await setDoc(doc(db,'attendance', courseId+'_'+date), { courseId, date, statuses });
+        statusEl.textContent='Attendance saved.'; statusEl.className='status-msg ok';
+      }catch(e){ statusEl.textContent=e.message; statusEl.className='status-msg err'; }
+    };
+
+    // ---------- Grades ----------
+    window.renderGrades = () => {
+      const courseId = document.getElementById('gradeCourse').value;
+      const roster = students.filter(s=>s.courseId===courseId);
+      document.getElementById('gradeBody').innerHTML = roster.map(s=>`
+        <tr><td>${s.name} <small style="color:var(--text-muted)">(${s.studentId})</small></td>
+        <td><input type="number" class="gradeInput" data-sid="${s.id}" placeholder="0"></td></tr>`).join('')
+        || '<tr><td colspan="2" class="empty-hint">No students in this course.</td></tr>';
+    };
+    window.saveGrades = async () => {
+      const courseId = document.getElementById('gradeCourse').value;
+      const assignment = document.getElementById('gradeAssignment').value.trim();
+      const max = Number(document.getElementById('gradeMax').value || 100);
+      const statusEl = document.getElementById('gradeStatus');
+      if(!courseId || !assignment){ statusEl.textContent='Choose a course and name the assignment.'; statusEl.className='status-msg err'; return; }
+      try{
+        const existing = grades[courseId] && grades[courseId].entries ? grades[courseId].entries : {};
+        document.querySelectorAll('.gradeInput').forEach(inp=>{
+          const sid = inp.dataset.sid;
+          if(inp.value === '') return;
+          if(!existing[sid]) existing[sid] = {};
+          existing[sid][assignment] = { score: Number(inp.value), max };
+        });
+        await setDoc(doc(db,'grades', courseId), { courseId, entries: existing });
+        statusEl.textContent='Grades saved.'; statusEl.className='status-msg ok';
+      }catch(e){ statusEl.textContent=e.message; statusEl.className='status-msg err'; }
+    };
+
+    document.getElementById('attDate').valueAsDate = new Date();
+  </script>
+
+  <!-- Approved users list, shared with the club website -->
+  <script src="https://university-of-baghdad-college-of-ai.github.io/Big_Data_AI_Club_Baghdad/approved-users.js"></script>
+
+  <script>
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
