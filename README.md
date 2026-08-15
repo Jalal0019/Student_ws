@@ -1,10 +1,10 @@
 # Attendance & Grades System — Big Data AI Club edition
 
 This version is restyled to match the club website exactly (same fonts, colors,
-header/nav/footer, auth top bar, and access-denied modal), and uses the **same
-Firebase project** (`bigdataaiclub`) and the **same `approved-users.js`** role
-file already hosted on the club's GitHub Pages site — so instructor access is
-managed in one place.
+header/nav/footer, auth top bar, and access-denied modal). It uses its **own
+dedicated Firebase project** (`student-ws`) for data, while reusing the club
+website's `approved-users.js` role file purely to decide who counts as an
+instructor — the two are otherwise independent.
 
 ## Files
 ```
@@ -30,20 +30,18 @@ logo3.png, coai-english-logo.png, favicon.png ← club branding assets
 
 ## One-time setup
 
-1. **Deploy these files** to a GitHub Pages site (can be a new repo, or a
-   subfolder of an existing one, e.g. `https://jalal0019.github.io/attendance/`).
-2. **Add instructors** by editing `approved-users.js` in the
-   `Big_Data_AI_Club_Baghdad` repo (already contains your admin email):
-   ```js
-   var APPROVED_USERS = {
-     "jalal.hameed@uobaghdad.edu.iq": "admin",
-     "some.professor@uobaghdad.edu.iq": "professor",
-   };
-   ```
-   This file is shared with the main club website, so adding a professor here
-   also gives them whatever the club site already grants that role.
-3. **Check Firestore security rules** in the `bigdataaiclub` Firebase project
-   (console.firebase.google.com → Firestore → Rules). At minimum you need:
+1. **Deploy these files** to your `Student_ws` GitHub Pages repo, replacing
+   the existing content (`https://jalal0019.github.io/Student_ws/`).
+2. **Enable Google sign-in on the `student-ws` Firebase project** (this is
+   separate from the club's `bigdataaiclub` project, so it must be turned on
+   here too):
+   - Firebase Console → project `student-ws` → Authentication → Sign-in method
+     → enable **Google**.
+   - Authentication → Settings → Authorized domains → add `jalal0019.github.io`.
+3. **Check Firestore exists and has rules** for `student-ws`:
+   - Firebase Console → project `student-ws` → Firestore Database → if not
+     created yet, click "Create database".
+   - Rules tab, use at minimum:
    ```
    rules_version = '2';
    service cloud.firestore {
@@ -57,11 +55,18 @@ logo3.png, coai-english-logo.png, favicon.png ← club branding assets
    ```
    This lets any signed-in Google user *read* (needed for the student
    self-view) but you may want to tighten `write` to admin/professor-only
-   using a Firestore rule that checks a server-side roles collection, since
-   client-side role checks (like the ones in `teacher.html`) are only a UI
-   convenience, not real security. Let me know if you'd like help writing
-   stricter rules.
-4. Open `index.html`, choose a portal, and sign in with Google.
+   using server-side rules, since the client-side role check in
+   `teacher.html` is only a UI convenience, not real security. Let me know if
+   you'd like help writing stricter rules.
+4. **Add instructors** by editing `approved-users.js` in the
+   `Big_Data_AI_Club_Baghdad` repo (already contains your admin email):
+   ```js
+   var APPROVED_USERS = {
+     "jalal.hameed@uobaghdad.edu.iq": "admin",
+     "some.professor@uobaghdad.edu.iq": "professor",
+   };
+   ```
+5. Open `index.html`, choose a portal, and sign in with Google.
 
 ## Data model (Firestore)
 - `courses/{id}`: `{ code, title }`

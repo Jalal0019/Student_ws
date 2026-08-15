@@ -199,14 +199,14 @@
     import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, query }
       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    // Same Firebase project as the club website
+    // Dedicated Firebase project for this attendance system
     const firebaseConfig = {
-      apiKey: "AIzaSyArF59_11UVHPo9yZW5zg2RYQWaKjIZXYw",
-      authDomain: "bigdataaiclub.firebaseapp.com",
-      projectId: "bigdataaiclub",
-      storageBucket: "bigdataaiclub.firebasestorage.app",
-      messagingSenderId: "877020220761",
-      appId: "1:877020220761:web:6c6dcc22b63fcd2ec15048"
+      apiKey: "AIzaSyAmkSIIXidW4Fb36RRUkQhI5JzvV0pXGew",
+      authDomain: "student-ws.firebaseapp.com",
+      projectId: "student-ws",
+      storageBucket: "student-ws.firebasestorage.app",
+      messagingSenderId: "257401448840",
+      appId: "1:257401448840:web:397be7fdd279d76c0c323d"
     };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
