@@ -6,6 +6,12 @@ dedicated Firebase project** (`student-ws`) for data, while reusing the club
 website's `approved-users.js` role file purely to decide who counts as an
 instructor — the two are otherwise independent.
 
+**Note:** as of this version, all CSS is embedded directly inside each HTML
+file, so the pages have zero external stylesheet dependencies — they'll
+render correctly even if `style.css`/`dashboard.css` aren't uploaded. Those
+two files are still included for reference/editing only.
+
+
 ## Files
 ```
 index.html      ← portal picker
