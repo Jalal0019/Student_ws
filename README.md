@@ -28,10 +28,10 @@ index.html       ← portal picker
 teacher.html      ← Instructor Portal (courses, roster, attendance, gradebook)
 student.html       ← private-records notice (no data, no fetch, no sign-in)
 data/
-  courses.json     ← [{ code, name }]
+  courses.json     ← [{ code, name, semester }]
   students.json     ← [{ id, name, email, courseCode }]
   attendance.json    ← { courseCode: { date: { studentId: "present"|"absent"|"late" } } }
-  grades.json       ← { courseCode: { studentId: { assignmentName: { score, max } } } }
+  grades.json       ← { courseCode: { studentId: { assignmentName: { score, max: 100 } } } }
   instructors.json   ← [{ name, email }]  — who is allowed into the Instructor Portal
 logo3.png, coai-english-logo.png, favicon.png ← club branding assets
 style.css, dashboard.css ← reference copies only (already embedded in the HTML)
@@ -68,32 +68,42 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
 - **Instructor Portal**: enter the repo owner/name, sign in with Google →
   the app checks your email against `instructors.json`. If approved, enter
   your GitHub token to unlock the dashboard.
-  - **Courses & Students tab**: add courses, then enroll students either one
-    at a time, or by **pasting rows copied straight from Excel** (Name, ID,
-    email columns) into the "Paste from Excel" box — no more typing each
-    student by hand.
+  - **Courses & Students tab**: set a semester (e.g. "Fall 2026") before
+    creating a course — every new course is tagged with it. Use the
+    "Filter everything by semester" dropdown to narrow every course list
+    on the page (course table, attendance, gradebook, profiles) down to one
+    semester, or view all. Enroll students either one at a time, or by
+    **pasting rows copied straight from Excel** (Name, ID, email columns)
+    into the "Paste from Excel" box. Below that, **Student profiles**
+    lets you search by name/ID/email, filter by course, and click "View"
+    on any student for a full profile — attendance history + stats and
+    every grade, in one popup — with a Delete button per row.
   - **Attendance tab**: a spreadsheet grid like your Excel sheet — one row
     per student, one column per session date. Click a cell to cycle
     Present → Absent → Late; Present/Absent/% totals update automatically.
-    Add new session columns with the date picker.
+    Add new session columns with the date picker, or delete a session with
+    the × on its column header.
   - **Gradebook tab**: same idea — one row per student, one column per
-    assessment (Quiz 1, Midterm, etc., each with its own max score), type
-    scores directly into the grid, Total updates automatically.
-  - **Student Profiles tab**: search by name, ID, or email (optionally
-    filter by course), then click "View" on any student to see a full
-    profile — attendance stats and history, and every grade — in one popup.
+    assessment (Quiz 1, Midterm, etc.), every score out of a fixed 0–100
+    scale. Type scores directly into the grid (values are clamped to
+    0–100), Average updates automatically. Delete a column with the ×
+    on its header.
   - Each "Save" button commits that file straight to the repo.
 - **Student Portal**: now a static page — it does not fetch, store, or
   display any student data, and has no sign-in. Students should be directed
   to their instructor for any question about their record.
 
-## Session persistence
-Once you sign in and enter your token, the Instructor Portal remembers your
-session for the rest of that browser tab — navigating to Home and back, or
-reloading the page, won't ask you to sign in or re-enter the token again.
-It uses `sessionStorage`, so it's cleared automatically when you close the
-tab (or click "Sign out"), and never persists across different browsers or
-devices.
+## Signing in without re-entering your token every time
+The first time you connect with a token, it's saved in `localStorage` on
+that browser/device. On future visits you still click "Sign in with
+Google" (so the instructor-email check always runs), but once your email is
+verified the saved token is tried automatically — if it still works, you
+land straight on the dashboard with no token prompt. If the saved token has
+expired or been revoked, it's cleared automatically and you'll be asked to
+enter a new one once. "Sign out" clears the saved token immediately.
+Because this uses `localStorage` (not just the current tab), it persists
+across browser restarts on that device — don't use "remember" on a shared
+or public computer.
 
 ## Security note
 The instructor-email check happens in the browser — it's a UX gate, not

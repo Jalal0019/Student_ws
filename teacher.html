@@ -750,26 +750,23 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <button class="tab-btn active" data-tab="roster" onclick="switchTab('roster')">Courses &amp; Students</button>
       <button class="tab-btn" data-tab="attendance" onclick="switchTab('attendance')">Attendance</button>
       <button class="tab-btn" data-tab="grades" onclick="switchTab('grades')">Gradebook</button>
-      <button class="tab-btn" data-tab="profiles" onclick="switchTab('profiles')">Student Profiles</button>
-    </div>
-
-    <div class="tab-panel" id="tab-profiles" style="display:none;">
-      <div class="dash-panel">
-        <h2>Student profiles</h2>
-        <div class="field-row">
-          <div><label>Search by name, ID, or email</label><input id="profileSearch" placeholder="Type to search..." oninput="renderProfileList()"></div>
-          <div><label>Filter by course</label><select id="profileCourseFilter" onchange="renderProfileList()"><option value="">All courses</option></select></div>
-        </div>
-        <div class="table-wrap">
-          <table class="grid-table">
-            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
-            <tbody id="profileList"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
 
     <div class="tab-panel" id="tab-roster">
+      <div class="dash-panel">
+        <h2>Semester</h2>
+        <div class="field-row">
+          <div><label>Current semester (used when creating a course)</label>
+            <div style="display:flex; gap:8px;">
+              <input id="newSemesterName" placeholder="Fall 2026" list="semesterOptions">
+              <datalist id="semesterOptions"></datalist>
+              <button class="btn btn-gold btn-sm" onclick="setActiveSemester()">Set</button>
+            </div>
+          </div>
+          <div><label>Filter everything by semester</label><select id="semesterFilter" onchange="onSemesterFilterChange()"><option value="">All semesters</option></select></div>
+        </div>
+      </div>
+
       <div class="grid-2">
         <div class="dash-panel">
           <h2>Create course</h2>
@@ -777,10 +774,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
             <div><label>Course code</label><input id="courseCode" placeholder="AICI201"></div>
             <div><label>Course title</label><input id="courseName" placeholder="Object-Oriented Programming"></div>
           </div>
+          <p style="font-size:0.78em; color:var(--text-muted); margin:-4px 0 10px;">New course will be added to semester: <strong id="activeSemesterLabel">(none set)</strong></p>
           <button class="btn btn-primary" onclick="addCourse()">Add course</button>
           <div class="status-msg" id="courseStatus"></div>
           <div class="table-wrap" style="margin-top:16px;">
-            <table class="grid-table"><thead><tr><th>Code</th><th>Title</th><th></th></tr></thead><tbody id="coursesList"></tbody></table>
+            <table class="grid-table"><thead><tr><th>Code</th><th>Title</th><th>Semester</th><th></th></tr></thead><tbody id="coursesList"></tbody></table>
           </div>
           <button class="btn btn-ghost btn-sm" style="margin-top:12px;" onclick="saveCourses()">Save courses to GitHub</button>
         </div>
@@ -811,11 +809,22 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
             <button class="btn btn-primary" onclick="bulkEnroll()">Add all pasted students</button>
           </div>
           <div class="status-msg" id="studentStatus"></div>
-          <div class="table-wrap" style="margin-top:16px;">
-            <table class="grid-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th></th></tr></thead><tbody id="studentsList"></tbody></table>
-          </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:12px;" onclick="saveStudents()">Save students to GitHub</button>
         </div>
+      </div>
+
+      <div class="dash-panel">
+        <h2>Student profiles</h2>
+        <div class="field-row">
+          <div><label>Search by name, ID, or email</label><input id="profileSearch" placeholder="Type to search..." oninput="renderProfileList()"></div>
+          <div><label>Filter by course</label><select id="profileCourseFilter" onchange="renderProfileList()"><option value="">All courses</option></select></div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid-table">
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
+            <tbody id="profileList"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px;" onclick="saveStudents()">Save students to GitHub</button>
       </div>
     </div>
 
@@ -850,15 +859,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="field-row">
           <div><label>Course</label><select id="gradeCourse" onchange="renderGrades()"></select></div>
           <div>
-            <label>Add a new assessment column</label>
+            <label>Add a new assessment column (scored 0–100)</label>
             <div style="display:flex; gap:8px;">
               <input id="gradeNewName" placeholder="Quiz 1" style="flex:1;">
-              <input id="gradeNewMax" type="number" value="10" style="width:80px;" title="Max score">
               <button class="btn btn-gold btn-sm" onclick="addAssessmentColumn()">+ Add</button>
             </div>
           </div>
         </div>
-        <p style="font-size:0.78em; color:var(--text-muted); margin:-4px 0 14px;">Type scores directly into the grid — just like the yellow cells in your Excel gradebook. Total updates automatically.</p>
+        <p style="font-size:0.78em; color:var(--text-muted); margin:-4px 0 14px;">Type scores directly into the grid (0–100) — just like the yellow cells in your Excel gradebook. Total updates automatically.</p>
         <div class="table-wrap">
           <table class="grid-table" id="gradeGridTable">
             <thead><tr id="gradeHeadRow"></tr></thead>
@@ -924,7 +932,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
       }
       document.getElementById('attNewDate').valueAsDate = new Date();
-      tryRestoreSession();
     };
 
     function parseJwt(token){
@@ -934,7 +941,20 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 
     window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
     window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-    window.tbSignOut = () => { sessionStorage.removeItem('teacherSession'); location.reload(); };
+    window.tbSignOut = () => { localStorage.removeItem('ghToken'); location.reload(); };
+
+    async function loadAllData(){
+      const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
+      const s = await ghGet('students.json'); students = s.data || []; shas.students = s.sha;
+      const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
+      const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
+    }
+    function showDashboard(){
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('tokenGate').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      renderRoster();
+    }
 
     async function handleGoogleCredential(response){
       const { owner, repo, branch, path } = REPO;
@@ -962,6 +982,21 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         document.getElementById('tbName').textContent = payload.name || email;
         document.getElementById('verifiedEmail').textContent = email;
         closeSignInPopup();
+
+        // If a token was saved from a previous session, try it automatically
+        const savedToken = localStorage.getItem('ghToken');
+        if(savedToken){
+          cfg.token = savedToken;
+          try{
+            await loadAllData();
+            showDashboard();
+            return;
+          }catch(e){
+            // Saved token no longer works — clear it and fall through to manual entry
+            localStorage.removeItem('ghToken');
+            cfg.token = '';
+          }
+        }
         document.getElementById('gate').style.display = 'none';
         document.getElementById('tokenGate').style.display = 'block';
       }catch(e){
@@ -1008,75 +1043,57 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(!cfg.token){ setStatus('connectStatus','Please enter a token.', false); return; }
       setStatus('connectStatus','Connecting and loading data...');
       try{
-        const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
-        const s = await ghGet('students.json'); students = s.data || []; shas.students = s.sha;
-        const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
-        const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
-        document.getElementById('tokenGate').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        renderRoster();
-        saveSession();
+        await loadAllData();
+        localStorage.setItem('ghToken', cfg.token);
+        showDashboard();
       }catch(e){ setStatus('connectStatus', e.message, false); }
     };
 
-    // ---------- Session persistence (this browser tab only) ----------
-    function saveSession(){
-      const nameEl = document.getElementById('tbName');
-      const avatarEl = document.getElementById('tbAvatar');
-      sessionStorage.setItem('teacherSession', JSON.stringify({
-        token: cfg.token,
-        email: document.getElementById('verifiedEmail').textContent,
-        name: nameEl.textContent,
-        picture: avatarEl.src
-      }));
-    }
-    async function tryRestoreSession(){
-      const raw = sessionStorage.getItem('teacherSession');
-      if(!raw) return;
-      let session;
-      try{ session = JSON.parse(raw); }catch(e){ return; }
-      cfg = { ...REPO, token: session.token };
-      document.getElementById('tbNotSigned').style.display = 'none';
-      document.getElementById('tbSignedIn').style.display = 'flex';
-      document.getElementById('tbAvatar').src = session.picture || '';
-      document.getElementById('tbName').textContent = session.name || session.email;
-      document.getElementById('verifiedEmail').textContent = session.email;
-      document.getElementById('gate').style.display = 'none';
-      try{
-        const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
-        const s = await ghGet('students.json'); students = s.data || []; shas.students = s.sha;
-        const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
-        const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
-        document.getElementById('dashboard').style.display = 'block';
-        renderRoster();
-      }catch(e){
-        // Saved token no longer works — clear it and fall back to sign-in
-        sessionStorage.removeItem('teacherSession');
-        document.getElementById('gate').style.display = 'block';
-      }
-    }
+    let activeSemester = '';
 
+    function distinctSemesters(){
+      return [...new Set(courses.map(c=>c.semester).filter(Boolean))].sort();
+    }
+    window.setActiveSemester = () => {
+      const val = document.getElementById('newSemesterName').value.trim();
+      if(!val) return;
+      activeSemester = val;
+      document.getElementById('activeSemesterLabel').textContent = val;
+      renderRoster();
+    };
+    window.onSemesterFilterChange = () => { renderRoster(); };
+    function filteredCourses(){
+      const f = document.getElementById('semesterFilter').value;
+      return f ? courses.filter(c=>c.semester===f) : courses;
+    }
     function courseSelectOptions(){
-      return courses.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('') || '<option value="">Add a course first</option>';
+      const list = filteredCourses();
+      return list.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('') || '<option value="">Add a course first</option>';
     }
     function renderRoster(){
       document.getElementById('statCourses').textContent = courses.length;
       document.getElementById('statStudents').textContent = students.length;
-      document.getElementById('coursesList').innerHTML = courses.map((c,i)=>`
-        <tr><td>${c.code}</td><td>${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="removeCourse(${i})">Delete</button></td></tr>`).join('')
-        || '<tr><td colspan="3" class="empty-hint">No courses yet.</td></tr>';
-      document.getElementById('studentsList').innerHTML = students.map((s,i)=>`
-        <tr><td>${s.id}</td><td>${s.name}</td><td>${s.email}</td><td>${s.courseCode||'—'}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="removeStudent(${i})">Delete</button></td></tr>`).join('')
-        || '<tr><td colspan="5" class="empty-hint">No students enrolled yet.</td></tr>';
+
+      const sems = distinctSemesters();
+      document.getElementById('semesterOptions').innerHTML = sems.map(s=>`<option value="${s}">`).join('');
+      const semFilter = document.getElementById('semesterFilter'); const semFilterCur = semFilter.value;
+      semFilter.innerHTML = '<option value="">All semesters</option>' + sems.map(s=>`<option value="${s}">${s}</option>`).join('');
+      if(sems.includes(semFilterCur)) semFilter.value = semFilterCur;
+      document.getElementById('activeSemesterLabel').textContent = activeSemester || '(none set)';
+
+      document.getElementById('coursesList').innerHTML = filteredCourses().map((c)=>{
+        const i = courses.indexOf(c);
+        return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.semester||'—'}</td><td><button class="btn btn-danger btn-sm" onclick="removeCourse(${i})">Delete</button></td></tr>`;
+      }).join('') || '<tr><td colspan="4" class="empty-hint">No courses yet.</td></tr>';
+
       ['studentCourse','bulkCourse','attCourse','gradeCourse'].forEach(id=>{
         const el = document.getElementById(id); const cur = el.value;
         el.innerHTML = courseSelectOptions();
-        if(courses.some(c=>c.code===cur)) el.value = cur;
+        if(filteredCourses().some(c=>c.code===cur)) el.value = cur;
       });
       const pcf = document.getElementById('profileCourseFilter'); const pcfCur = pcf.value;
       pcf.innerHTML = '<option value="">All courses</option>' + courseSelectOptions();
-      if(courses.some(c=>c.code===pcfCur)) pcf.value = pcfCur;
+      if(filteredCourses().some(c=>c.code===pcfCur)) pcf.value = pcfCur;
       renderAttendance(); renderGrades(); renderProfileList();
     }
 
@@ -1085,7 +1102,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const name = document.getElementById('courseName').value.trim();
       if(!code || !name){ setStatus('courseStatus','Fill in both fields.', false); return; }
       if(courses.some(c=>c.code===code)){ setStatus('courseStatus','This code already exists.', false); return; }
-      courses.push({code, name});
+      courses.push({code, name, semester: activeSemester || ''});
       document.getElementById('courseCode').value=''; document.getElementById('courseName').value='';
       setStatus('courseStatus','Added locally — click "Save courses to GitHub".', true);
       renderRoster();
@@ -1109,7 +1126,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       setStatus('studentStatus','Added locally — click "Save students to GitHub".', true);
       renderRoster();
     };
-    window.removeStudent = (i) => { students.splice(i,1); renderRoster(); };
+    window.removeStudent = (id) => {
+      const i = students.findIndex(s=>s.id===id);
+      if(i>-1){ students.splice(i,1); renderRoster(); }
+    };
     window.saveStudents = async () => {
       try{ setStatus('studentStatus','Saving...'); shas.students = await ghPut('students.json', students, shas.students, 'Update students'); setStatus('studentStatus','Saved.', true); }
       catch(e){ setStatus('studentStatus', e.message, false); }
@@ -1223,7 +1243,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     window.addAssessmentColumn = () => {
       const code = document.getElementById('gradeCourse').value;
       const name = document.getElementById('gradeNewName').value.trim();
-      const max = Number(document.getElementById('gradeNewMax').value || 10);
+      const max = 100;
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       if(!name){ setStatus('gradeStatus','Name the assessment first.', false); return; }
       if(!grades[code]) grades[code] = {};
@@ -1247,29 +1267,33 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const roster = students.filter(s=>s.courseCode===code);
       const assessments = assessmentsFor(code);
       const head = document.getElementById('gradeHeadRow');
-      head.innerHTML = '<th class="sticky-col">Student</th>' + assessments.map(a=>{
-        const max = (grades[code] && roster[0] && grades[code][roster[0].id] && grades[code][roster[0].id][a]) ? grades[code][roster[0].id][a].max : '';
-        return `<th>${a}${max?` (/${max})`:''} <button type="button" title="Delete this assessment" onclick="deleteAssessmentColumn('${a.replace(/'/g,"\\'")}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`;
-      }).join('') + '<th>Total</th>';
+      head.innerHTML = '<th class="sticky-col">Student</th>' + assessments.map(a=>
+        `<th>${a} (/100) <button type="button" title="Delete this assessment" onclick="deleteAssessmentColumn('${a.replace(/'/g,"\\'")}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`
+      ).join('') + '<th>Average</th>';
       if(!roster.length || !assessments.length){
         document.getElementById('gradeBody').innerHTML = `<tr><td colspan="${assessments.length+2}" class="empty-hint">${!roster.length?'No students in this course.':'Add an assessment column to start.'}</td></tr>`;
         return;
       }
       document.getElementById('gradeBody').innerHTML = roster.map(s=>{
-        let totalScore=0, totalMax=0;
+        let sum=0, count=0;
         const cells = assessments.map(a=>{
-          const entry = (grades[code][s.id] && grades[code][s.id][a]) || { score:0, max:0 };
-          totalScore += Number(entry.score)||0; totalMax += Number(entry.max)||0;
-          return `<td><input type="number" class="gradeCell" data-sid="${s.id}" data-name="${a}" value="${entry.score}" onchange="updateGradeCell(this)" style="width:70px;"></td>`;
+          const entry = (grades[code][s.id] && grades[code][s.id][a]) || { score:0, max:100 };
+          sum += Number(entry.score)||0; count++;
+          return `<td><input type="number" min="0" max="100" class="gradeCell" data-sid="${s.id}" data-name="${a}" value="${entry.score}" onchange="updateGradeCell(this)" style="width:70px;"></td>`;
         }).join('');
-        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td><strong>${totalScore} / ${totalMax}</strong></td></tr>`;
+        const avg = count ? Math.round(sum/count) : 0;
+        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td><strong>${avg} / 100</strong></td></tr>`;
       }).join('');
     };
     window.updateGradeCell = (inp) => {
       const code = document.getElementById('gradeCourse').value;
       const sid = inp.dataset.sid, name = inp.dataset.name;
       if(!grades[code][sid][name]) return;
-      grades[code][sid][name].score = Number(inp.value) || 0;
+      let v = Number(inp.value) || 0;
+      if(v < 0) v = 0;
+      if(v > 100) v = 100;
+      inp.value = v;
+      grades[code][sid][name].score = v;
       renderGrades();
     };
     window.saveGrades = async () => {
@@ -1294,7 +1318,9 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     window.renderProfileList = () => {
       const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
       const courseFilter = document.getElementById('profileCourseFilter').value;
+      const semesterCourseCodes = new Set(filteredCourses().map(c=>c.code));
       const rows = students.filter(s=>{
+        if(!semesterCourseCodes.has(s.courseCode)) return false;
         if(courseFilter && s.courseCode !== courseFilter) return false;
         if(!q) return true;
         return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
@@ -1303,7 +1329,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         const stats = attendanceStatsFor(s);
         const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
         return `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
-        <td><button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button></td></tr>`;
+        <td style="white-space:nowrap;">
+          <button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button>
+          <button class="btn btn-danger btn-sm" onclick="removeStudent('${s.id}')">Delete</button>
+        </td></tr>`;
       }).join('') || '<tr><td colspan="6" class="empty-hint">No matching students.</td></tr>';
     };
     window.openProfile = (sid) => {
