@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Attendance & Grades — Big Data AI Club</title>
+  <title>Student Profiles — Big Data AI Club</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+<style>
 /* =============================================
    BIG DATA AI CLUB — Modern Responsive CSS
    Fonts: Plus Jakarta Sans + Inter
@@ -667,9 +667,37 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 .access-gate h1 { font-family:'Plus Jakarta Sans',sans-serif; font-size:1.5em; font-weight:800; color:var(--navy); margin-bottom:8px; }
 .access-gate p.sub { color:var(--text-muted); font-size:0.95em; margin-bottom:26px; }
 
+    nav a[href="profiles.html"] { color:#fff; }
+    nav a[href="profiles.html"]::after { transform:scaleX(1); }
   </style>
 </head>
 <body>
+  <div class="auth-topbar">
+    <div class="not-signed" id="tbNotSigned">
+      <span>Not signed in</span>
+      <button class="tb-signin-btn" onclick="openSignInPopup()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+        Sign in
+      </button>
+    </div>
+    <div class="signed-in" id="tbSignedIn">
+      <img class="avatar" id="tbAvatar" src="" alt="">
+      <span class="tb-name" id="tbName"></span>
+      <span class="tb-role badge-role badge-admin">Instructor</span>
+      <button class="tb-signout" onclick="tbSignOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
+    <div class="tb-popup">
+      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
+      <h3>Instructor sign-in</h3>
+      <p>Sign in with your approved Google account, then enter a GitHub token to enable saving.</p>
+      <div id="googleBtn" style="margin:6px 0 4px;"></div>
+      <div class="status-msg err" id="tbStatus"></div>
+    </div>
+  </div>
+
   <header>
     <div class="logo-container">
       <a href="https://uobaghdad.edu.iq/" target="_blank">
@@ -679,8 +707,8 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <img src="coai-english-logo.png" alt="College of AI Logo" class="club-logo" style="height:80px;width:auto;object-fit:contain;">
       </a>
     </div>
-    <h1>Attendance &amp; Grades System</h1>
-    <p>Big Data Artificial Intelligence Club — Courses, Attendance &amp; Gradebook</p>
+    <h1><a href="index.html">Student Profiles</a></h1>
+    <p>Search and view any student's attendance and grades — Big Data AI Club</p>
   </header>
 
   <nav>
@@ -692,38 +720,299 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     </div>
   </nav>
 
-  <section>
-    <h2>Choose your portal</h2>
-    <div class="grid-2" style="margin-top:20px; grid-template-columns:repeat(3,1fr);">
-      <div class="dash-panel" style="border-left-color:var(--indigo);">
-        <h2 style="border:none;">Instructor Portal</h2>
-        <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
-          Create courses, enroll students, record daily attendance, and manage the gradebook.
-          Requires an approved instructor Google account and a GitHub token.
-        </p>
-        <a href="teacher.html" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Go to Instructor Portal →</a>
+  <div class="access-gate" id="gate">
+    <h1>Instructor access required</h1>
+    <p class="sub">Sign in with an approved Google account (top-right) to continue.</p>
+  </div>
+
+  <div class="access-gate hidden" id="tokenGate" style="display:none;">
+    <h1>Write access</h1>
+    <p class="sub">Signed in as <strong id="verifiedEmail"></strong>. Enter a GitHub token (kept only for this session) to enable saving.</p>
+    <div class="dash-panel" style="text-align:left; max-width:440px; margin:0 auto;">
+      <label>GitHub Personal Access Token</label>
+      <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      <button class="btn btn-primary" style="width:100%;" onclick="connect()">Connect and load data</button>
+      <div class="status-msg err" id="connectStatus"></div>
+    </div>
+  </div>
+
+  <main class="dash-main" id="dashboard" style="display:none;">
+    <div class="dash-panel">
+      <h2>Student profiles</h2>
+      <div class="field-row">
+        <div><label>Search by name, ID, or email</label><input id="profileSearch" placeholder="Type to search..." oninput="renderProfileList()"></div>
+        <div><label>Filter by course</label><select id="profileCourseFilter" onchange="renderProfileList()"><option value="">All courses</option></select></div>
       </div>
-      <div class="dash-panel" style="border-left-color:var(--accent, #5ee3c9);">
-        <h2 style="border:none;">Student Profiles</h2>
-        <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
-          Search and view any student's full attendance history and grades. Instructor-only.
-        </p>
-        <a href="profiles.html" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Go to Profiles →</a>
-      </div>
-      <div class="dash-panel" style="border-left-color:var(--gold);">
-        <h2 style="border:none;">Student Portal</h2>
-        <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
-          Sign in with your university Google account to view your own attendance and grades — read-only.
-        </p>
-        <a href="student.html" class="btn btn-gold" style="text-decoration:none; display:inline-block;">Go to Student Portal →</a>
+      <div class="table-wrap">
+        <table class="grid-table">
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
+          <tbody id="profileList"></tbody>
+        </table>
       </div>
     </div>
-  </section>
+  </main>
 
   <footer>
     <p>&copy; <span id="footerYear">2026</span> <strong>Big Data Artificial Intelligence Club</strong> | Students Scientific Community</p>
     <p>Big Data Department | College of AI | University of Baghdad</p>
   </footer>
+
+  <div id="accessDeniedModal" class="center-modal">
+    <div class="center-modal-box">
+      <div style="font-size:3em;margin-bottom:12px;">&#128683;</div>
+      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">Access Denied</h3>
+      <p style="font-size:0.92em;color:var(--text-muted);margin-bottom:6px;">Your account</p>
+      <p style="font-size:0.95em;font-weight:700;color:#C62828;margin-bottom:16px;word-break:break-all;" id="deniedEmailModal"></p>
+      <p style="font-size:0.88em;color:var(--text-muted);line-height:1.6;margin-bottom:24px;">is not on the approved instructors list.<br>Please contact the <strong style="color:var(--navy);">Club Manager</strong> to request access.</p>
+      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('accessDeniedModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <div id="profileModal" class="center-modal">
+    <div class="center-modal-box" style="max-width:640px; text-align:left;">
+      <button class="tb-popup-close" onclick="document.getElementById('profileModal').classList.remove('open')" style="position:absolute; top:14px; right:18px;">&#10005;</button>
+      <h3 id="profileModalName" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:4px;"></h3>
+      <p id="profileModalMeta" style="font-size:0.85em;color:var(--text-muted);margin-bottom:18px;"></p>
+      <div class="stats-grid" id="profileModalStats" style="margin-bottom:20px;"></div>
+      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Attendance record</h4>
+      <div class="table-wrap" style="margin-bottom:20px; max-height:220px; overflow-y:auto;">
+        <table class="grid-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody id="profileModalAtt"></tbody></table>
+      </div>
+      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Grades</h4>
+      <div class="table-wrap" style="max-height:220px; overflow-y:auto;">
+        <table class="grid-table"><thead><tr><th>Assessment</th><th>Score</th></tr></thead><tbody id="profileModalGrades"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const GOOGLE_CLIENT_ID = "519113872570-v713c1hm9pvsjdt4ccgrb2pm4vptcmsh.apps.googleusercontent.com";
+    const REPO = { owner: 'jalal0019', repo: 'Student_ws', branch: 'main', path: 'data' };
+
+    let cfg = { ...REPO, token: '' }, courses = [], students = [], attendance = {}, grades = {};
+    let shas = { courses: null, students: null, attendance: null, grades: null };
+
+    window.onload = function(){
+      if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
+        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+        google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme:'filled_black', shape:'pill', text:'signin_with' });
+      } else {
+        document.getElementById('googleBtn').innerHTML =
+          '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
+      }
+      tryAutoSignIn();
+    };
+
+    function parseJwt(token){
+      const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+      return JSON.parse(decodeURIComponent(escape(atob(base64))));
+    }
+
+    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
+    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
+    window.tbSignOut = () => { localStorage.removeItem('teacherAuth'); location.reload(); };
+
+    async function ghGet(filename){
+      const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}/${filename}?ref=${cfg.branch}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${cfg.token}`, Accept:'application/vnd.github+json' } });
+      if(res.status === 404) return { data: null, sha: null };
+      if(!res.ok) throw new Error(`Failed to load ${filename}: ${res.status}`);
+      const json = await res.json();
+      const content = decodeURIComponent(escape(atob(json.content.replace(/\n/g,''))));
+      return { data: JSON.parse(content), sha: json.sha };
+    }
+    async function ghPut(filename, dataObj, sha, message){
+      const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}/${filename}`;
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj, null, 2))));
+      const body = { message: message || `update ${filename}`, content, branch: cfg.branch };
+      if(sha) body.sha = sha;
+      const res = await fetch(url, { method:'PUT', headers:{ Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json', 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+      if(!res.ok){ const err = await res.json().catch(()=>({})); throw new Error(`Failed to save ${filename}: ${err.message || res.status}`); }
+      const json = await res.json();
+      return json.content.sha;
+    }
+    function setStatus(id, msg, ok){
+      const el = document.getElementById(id);
+      el.textContent = msg; el.className = 'status-msg ' + (ok===true?'ok':ok===false?'err':'');
+    }
+
+    async function loadAllData(){
+      const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
+      const s = await ghGet('students.json'); students = s.data || []; shas.students = s.sha;
+      const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
+      const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
+    }
+    function showSignedInUI(email, name, picture){
+      document.getElementById('tbNotSigned').style.display = 'none';
+      document.getElementById('tbSignedIn').style.display = 'flex';
+      document.getElementById('tbAvatar').src = picture || '';
+      document.getElementById('tbName').textContent = name || email;
+      document.getElementById('verifiedEmail').textContent = email;
+    }
+    function showDashboard(){
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('tokenGate').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      renderCourseFilter();
+      renderProfileList();
+    }
+
+    async function tryAutoSignIn(){
+      const raw = localStorage.getItem('teacherAuth');
+      if(!raw) return;
+      let auth;
+      try{ auth = JSON.parse(raw); }catch(e){ localStorage.removeItem('teacherAuth'); return; }
+      cfg = { ...REPO, token: auth.token };
+      showSignedInUI(auth.email, auth.name, auth.picture);
+      try{
+        await loadAllData();
+        showDashboard();
+      }catch(e){
+        localStorage.removeItem('teacherAuth');
+        document.getElementById('tbNotSigned').style.display = 'flex';
+        document.getElementById('tbSignedIn').style.display = 'none';
+      }
+    }
+
+    async function handleGoogleCredential(response){
+      const { owner, repo, branch, path } = REPO;
+      const statusEl = document.getElementById('tbStatus');
+      const payload = parseJwt(response.credential);
+      const email = (payload.email || '').toLowerCase();
+      if(!payload.email_verified){ statusEl.textContent = 'This Google account has an unverified email.'; return; }
+      statusEl.textContent = 'Verifying access...'; statusEl.className = 'status-msg';
+      try{
+        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/instructors.json?t=${Date.now()}`;
+        const res = await fetch(url);
+        if(!res.ok) throw new Error('Could not load instructors.json. Check the repository details.');
+        const instructors = await res.json();
+        const match = instructors.find(i=>(i.email||'').toLowerCase()===email);
+        if(!match){
+          document.getElementById('deniedEmailModal').textContent = email;
+          document.getElementById('accessDeniedModal').classList.add('open');
+          closeSignInPopup();
+          return;
+        }
+        cfg = { owner, repo, branch, path, token: '' };
+        showSignedInUI(email, payload.name, payload.picture);
+        closeSignInPopup();
+
+        const raw = localStorage.getItem('teacherAuth');
+        const saved = raw ? JSON.parse(raw) : null;
+        if(saved && saved.token){
+          cfg.token = saved.token;
+          try{
+            await loadAllData();
+            showDashboard();
+            return;
+          }catch(e){
+            localStorage.removeItem('teacherAuth');
+            cfg.token = '';
+          }
+        }
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('tokenGate').style.display = 'block';
+      }catch(e){
+        statusEl.textContent = e.message; statusEl.className = 'status-msg err';
+      }
+    }
+
+    window.connect = async () => {
+      cfg.token = document.getElementById('cfgToken').value.trim();
+      if(!cfg.token){ setStatus('connectStatus','Please enter a token.', false); return; }
+      setStatus('connectStatus','Connecting and loading data...');
+      try{
+        await loadAllData();
+        localStorage.setItem('teacherAuth', JSON.stringify({
+          email: document.getElementById('verifiedEmail').textContent,
+          name: document.getElementById('tbName').textContent,
+          picture: document.getElementById('tbAvatar').src,
+          token: cfg.token
+        }));
+        showDashboard();
+      }catch(e){ setStatus('connectStatus', e.message, false); }
+    };
+
+    // ---------- Student profiles ----------
+    function renderCourseFilter(){
+      const pcf = document.getElementById('profileCourseFilter'); const cur = pcf.value;
+      pcf.innerHTML = '<option value="">All courses</option>' + courses.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('');
+      if(courses.some(c=>c.code===cur)) pcf.value = cur;
+    }
+    function attendanceStatsFor(s){
+      let present=0, absent=0, late=0;
+      const courseAtt = attendance[s.courseCode] || {};
+      Object.values(courseAtt).forEach(day=>{
+        const st = day[s.id];
+        if(!st) return;
+        if(st==='present') present++; else if(st==='absent') absent++; else late++;
+      });
+      const total = present+absent+late;
+      return { present, absent, late, total, pct: total ? Math.round(present*100/total) : null };
+    }
+    window.renderProfileList = () => {
+      const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
+      const courseFilter = document.getElementById('profileCourseFilter').value;
+      const rows = students.filter(s=>{
+        if(courseFilter && s.courseCode !== courseFilter) return false;
+        if(!q) return true;
+        return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
+      });
+      document.getElementById('profileList').innerHTML = rows.map(s=>{
+        const stats = attendanceStatsFor(s);
+        const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
+        return `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button>
+          <button class="btn btn-danger btn-sm" onclick="removeStudentHere('${s.id}')">Delete</button>
+        </td></tr>`;
+      }).join('') || '<tr><td colspan="6" class="empty-hint">No matching students.</td></tr>';
+    };
+    window.openProfile = (sid) => {
+      const s = students.find(x=>x.id===sid);
+      if(!s) return;
+      const course = courses.find(c=>c.code===s.courseCode);
+      document.getElementById('profileModalName').textContent = s.name;
+      document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name : 'no course'}`;
+
+      const stats = attendanceStatsFor(s);
+      document.getElementById('profileModalStats').innerHTML = `
+        <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${stats.present}</h3><p>Present</p></div></div>
+        <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${stats.absent}</h3><p>Absent</p></div></div>
+        <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${stats.late}</h3><p>Late</p></div></div>
+        <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${stats.pct===null?'—':stats.pct+'%'}</h3><p>Attendance rate</p></div></div>
+      `;
+
+      const courseAtt = attendance[s.courseCode] || {};
+      const attRows = Object.keys(courseAtt).sort().map(date=>{
+        const st = courseAtt[date][s.id];
+        if(!st) return '';
+        return `<tr><td>${date}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
+      }).filter(Boolean).join('');
+      document.getElementById('profileModalAtt').innerHTML = attRows || '<tr><td colspan="2" class="empty-hint">No attendance recorded yet.</td></tr>';
+
+      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
+      const gradeRows = Object.entries(courseGrades).map(([name,v])=>`<tr><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`).join('');
+      document.getElementById('profileModalGrades').innerHTML = gradeRows || '<tr><td colspan="2" class="empty-hint">No grades recorded yet.</td></tr>';
+
+      document.getElementById('profileModal').classList.add('open');
+    };
+    window.removeStudentHere = async (sid) => {
+      const s = students.find(x=>x.id===sid);
+      if(!s) return;
+      if(!confirm(`Delete ${s.name} (${s.id}) from the roster? This cannot be undone.`)) return;
+      const i = students.findIndex(x=>x.id===sid);
+      students.splice(i,1);
+      renderProfileList();
+      try{
+        shas.students = await ghPut('students.json', students, shas.students, `Delete student ${sid}`);
+      }catch(e){
+        alert('Delete failed to save: ' + e.message);
+      }
+    };
+  </script>
+
   <script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
 </body>
 </html>

@@ -25,7 +25,8 @@ no student, no search engine, no random visitor with the URL — can open
 ## Files
 ```
 index.html       ← portal picker
-teacher.html      ← Instructor Portal (courses, roster, attendance, gradebook)
+teacher.html      ← Instructor Portal (semesters, courses, roster, attendance, gradebook)
+profiles.html      ← Student Profiles (search + view any student's full record)
 student.html       ← private-records notice (no data, no fetch, no sign-in)
 data/
   courses.json     ← [{ code, name, semester }]
@@ -48,7 +49,7 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
    - Under **Authorized JavaScript origins**, add your GitHub Pages URL,
      e.g. `https://jalal0019.github.io`
    - Copy the Client ID (ends in `.apps.googleusercontent.com`) and paste it
-     into `teacher.html`, replacing:
+     into **both** `teacher.html` and `profiles.html`, replacing:
      ```js
      const GOOGLE_CLIENT_ID = "PUT_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
      ```
@@ -71,13 +72,10 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
   - **Courses & Students tab**: set a semester (e.g. "Fall 2026") before
     creating a course — every new course is tagged with it. Use the
     "Filter everything by semester" dropdown to narrow every course list
-    on the page (course table, attendance, gradebook, profiles) down to one
-    semester, or view all. Enroll students either one at a time, or by
-    **pasting rows copied straight from Excel** (Name, ID, email columns)
-    into the "Paste from Excel" box. Below that, **Student profiles**
-    lets you search by name/ID/email, filter by course, and click "View"
-    on any student for a full profile — attendance history + stats and
-    every grade, in one popup — with a Delete button per row.
+    on the page (course table, attendance, gradebook) down to one semester,
+    or view all. Enroll students either one at a time, or by **pasting
+    rows copied straight from Excel** (Name, ID, email columns) into the
+    "Paste from Excel" box.
   - **Attendance tab**: a spreadsheet grid like your Excel sheet — one row
     per student, one column per session date. Click a cell to cycle
     Present → Absent → Late; Present/Absent/% totals update automatically.
@@ -89,21 +87,27 @@ style.css, dashboard.css ← reference copies only (already embedded in the HTML
     0–100), Average updates automatically. Delete a column with the ×
     on its header.
   - Each "Save" button commits that file straight to the repo.
+- **Student Profiles page** (`profiles.html`): a separate page, same sign-in
+  and instructor check as the Instructor Portal. Search by name, ID, or
+  email, optionally filter by course, then click "View" on any student for
+  a full profile — attendance history + stats and every grade, in one
+  popup. Each row also has a Delete button, which saves immediately.
 - **Student Portal**: now a static page — it does not fetch, store, or
   display any student data, and has no sign-in. Students should be directed
   to their instructor for any question about their record.
 
-## Signing in without re-entering your token every time
-The first time you connect with a token, it's saved in `localStorage` on
-that browser/device. On future visits you still click "Sign in with
-Google" (so the instructor-email check always runs), but once your email is
-verified the saved token is tried automatically — if it still works, you
-land straight on the dashboard with no token prompt. If the saved token has
-expired or been revoked, it's cleared automatically and you'll be asked to
-enter a new one once. "Sign out" clears the saved token immediately.
-Because this uses `localStorage` (not just the current tab), it persists
-across browser restarts on that device — don't use "remember" on a shared
-or public computer.
+## Signing in without re-entering anything every time
+The first time you connect with a token, your email + name + token are all
+saved together in `localStorage` on that browser/device. On future visits
+— including opening a *different* page like `profiles.html`, since
+`localStorage` is shared across all pages on the same site — you land
+straight on the dashboard automatically, with no Google click and no token
+prompt. If the saved token has expired or been revoked, it's cleared
+automatically and you'll be dropped back to the normal sign-in flow. "Sign
+out" (on either `teacher.html` or `profiles.html`) clears the saved session
+everywhere immediately. Because this uses `localStorage`, it persists
+across browser restarts on that device — don't use this on a shared or
+public computer.
 
 ## Security note
 The instructor-email check happens in the browser — it's a UX gate, not

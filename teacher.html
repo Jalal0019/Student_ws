@@ -716,6 +716,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     <div class="nav-links">
       <a href="index.html">Home</a>
       <a href="teacher.html">Instructor</a>
+      <a href="profiles.html">Profiles</a>
       <a href="student.html">Student</a>
     </div>
   </nav>
@@ -809,22 +810,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
             <button class="btn btn-primary" onclick="bulkEnroll()">Add all pasted students</button>
           </div>
           <div class="status-msg" id="studentStatus"></div>
+          <div class="actions" style="margin-top:14px;">
+            <button class="btn btn-ghost btn-sm" onclick="saveStudents()">Save students to GitHub</button>
+            <a href="profiles.html" class="btn btn-gold btn-sm" style="text-decoration:none;">View student profiles →</a>
+          </div>
         </div>
-      </div>
-
-      <div class="dash-panel">
-        <h2>Student profiles</h2>
-        <div class="field-row">
-          <div><label>Search by name, ID, or email</label><input id="profileSearch" placeholder="Type to search..." oninput="renderProfileList()"></div>
-          <div><label>Filter by course</label><select id="profileCourseFilter" onchange="renderProfileList()"><option value="">All courses</option></select></div>
-        </div>
-        <div class="table-wrap">
-          <table class="grid-table">
-            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
-            <tbody id="profileList"></tbody>
-          </table>
-        </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:12px;" onclick="saveStudents()">Save students to GitHub</button>
       </div>
     </div>
 
@@ -896,23 +886,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     </div>
   </div>
 
-  <div id="profileModal" class="center-modal">
-    <div class="center-modal-box" style="max-width:640px; text-align:left;">
-      <button class="tb-popup-close" onclick="document.getElementById('profileModal').classList.remove('open')" style="position:absolute; top:14px; right:18px;">&#10005;</button>
-      <h3 id="profileModalName" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:4px;"></h3>
-      <p id="profileModalMeta" style="font-size:0.85em;color:var(--text-muted);margin-bottom:18px;"></p>
-      <div class="stats-grid" id="profileModalStats" style="margin-bottom:20px;"></div>
-      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Attendance record</h4>
-      <div class="table-wrap" style="margin-bottom:20px; max-height:220px; overflow-y:auto;">
-        <table class="grid-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody id="profileModalAtt"></tbody></table>
-      </div>
-      <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.95em;font-weight:700;color:var(--navy);margin-bottom:8px;">Grades</h4>
-      <div class="table-wrap" style="max-height:220px; overflow-y:auto;">
-        <table class="grid-table"><thead><tr><th>Assessment</th><th>Score</th></tr></thead><tbody id="profileModalGrades"></tbody></table>
-      </div>
-    </div>
-  </div>
-
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // Put your Google OAuth Client ID here (see README)
@@ -932,6 +905,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
       }
       document.getElementById('attNewDate').valueAsDate = new Date();
+      tryAutoSignIn();
     };
 
     function parseJwt(token){
@@ -941,7 +915,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 
     window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
     window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-    window.tbSignOut = () => { localStorage.removeItem('ghToken'); location.reload(); };
+    window.tbSignOut = () => { localStorage.removeItem('teacherAuth'); location.reload(); };
 
     async function loadAllData(){
       const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
@@ -949,11 +923,37 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
       const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
     }
+    function showSignedInUI(email, name, picture){
+      document.getElementById('tbNotSigned').style.display = 'none';
+      document.getElementById('tbSignedIn').style.display = 'flex';
+      document.getElementById('tbAvatar').src = picture || '';
+      document.getElementById('tbName').textContent = name || email;
+      document.getElementById('verifiedEmail').textContent = email;
+    }
     function showDashboard(){
       document.getElementById('gate').style.display = 'none';
       document.getElementById('tokenGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       renderRoster();
+    }
+
+    // Fully restore a previous sign-in (email + token) with no click needed
+    async function tryAutoSignIn(){
+      const raw = localStorage.getItem('teacherAuth');
+      if(!raw) return;
+      let auth;
+      try{ auth = JSON.parse(raw); }catch(e){ localStorage.removeItem('teacherAuth'); return; }
+      cfg = { ...REPO, token: auth.token };
+      showSignedInUI(auth.email, auth.name, auth.picture);
+      try{
+        await loadAllData();
+        showDashboard();
+      }catch(e){
+        // Saved token no longer works — clear it and fall back to manual sign-in
+        localStorage.removeItem('teacherAuth');
+        document.getElementById('tbNotSigned').style.display = 'flex';
+        document.getElementById('tbSignedIn').style.display = 'none';
+      }
     }
 
     async function handleGoogleCredential(response){
@@ -976,24 +976,20 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           return;
         }
         cfg = { owner, repo, branch, path, token: '' };
-        document.getElementById('tbNotSigned').style.display = 'none';
-        document.getElementById('tbSignedIn').style.display = 'flex';
-        document.getElementById('tbAvatar').src = payload.picture || '';
-        document.getElementById('tbName').textContent = payload.name || email;
-        document.getElementById('verifiedEmail').textContent = email;
+        showSignedInUI(email, payload.name, payload.picture);
         closeSignInPopup();
 
         // If a token was saved from a previous session, try it automatically
-        const savedToken = localStorage.getItem('ghToken');
-        if(savedToken){
-          cfg.token = savedToken;
+        const raw = localStorage.getItem('teacherAuth');
+        const saved = raw ? JSON.parse(raw) : null;
+        if(saved && saved.token){
+          cfg.token = saved.token;
           try{
             await loadAllData();
             showDashboard();
             return;
           }catch(e){
-            // Saved token no longer works — clear it and fall through to manual entry
-            localStorage.removeItem('ghToken');
+            localStorage.removeItem('teacherAuth');
             cfg.token = '';
           }
         }
@@ -1044,7 +1040,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       setStatus('connectStatus','Connecting and loading data...');
       try{
         await loadAllData();
-        localStorage.setItem('ghToken', cfg.token);
+        localStorage.setItem('teacherAuth', JSON.stringify({
+          email: document.getElementById('verifiedEmail').textContent,
+          name: document.getElementById('tbName').textContent,
+          picture: document.getElementById('tbAvatar').src,
+          token: cfg.token
+        }));
         showDashboard();
       }catch(e){ setStatus('connectStatus', e.message, false); }
     };
@@ -1091,10 +1092,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         el.innerHTML = courseSelectOptions();
         if(filteredCourses().some(c=>c.code===cur)) el.value = cur;
       });
-      const pcf = document.getElementById('profileCourseFilter'); const pcfCur = pcf.value;
-      pcf.innerHTML = '<option value="">All courses</option>' + courseSelectOptions();
-      if(filteredCourses().some(c=>c.code===pcfCur)) pcf.value = pcfCur;
-      renderAttendance(); renderGrades(); renderProfileList();
+      renderAttendance(); renderGrades();
     }
 
     window.addCourse = () => {
@@ -1301,68 +1299,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       try{ setStatus('gradeStatus','Saving...'); shas.grades = await ghPut('grades.json', grades, shas.grades, `Update grades ${code}`); setStatus('gradeStatus','Saved.', true); }
       catch(e){ setStatus('gradeStatus', e.message, false); }
-    };
-
-    // ---------- Student profiles ----------
-    function attendanceStatsFor(s){
-      let present=0, absent=0, late=0;
-      const courseAtt = attendance[s.courseCode] || {};
-      Object.values(courseAtt).forEach(day=>{
-        const st = day[s.id];
-        if(!st) return;
-        if(st==='present') present++; else if(st==='absent') absent++; else late++;
-      });
-      const total = present+absent+late;
-      return { present, absent, late, total, pct: total ? Math.round(present*100/total) : null };
-    }
-    window.renderProfileList = () => {
-      const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
-      const courseFilter = document.getElementById('profileCourseFilter').value;
-      const semesterCourseCodes = new Set(filteredCourses().map(c=>c.code));
-      const rows = students.filter(s=>{
-        if(!semesterCourseCodes.has(s.courseCode)) return false;
-        if(courseFilter && s.courseCode !== courseFilter) return false;
-        if(!q) return true;
-        return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
-      });
-      document.getElementById('profileList').innerHTML = rows.map(s=>{
-        const stats = attendanceStatsFor(s);
-        const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
-        return `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button>
-          <button class="btn btn-danger btn-sm" onclick="removeStudent('${s.id}')">Delete</button>
-        </td></tr>`;
-      }).join('') || '<tr><td colspan="6" class="empty-hint">No matching students.</td></tr>';
-    };
-    window.openProfile = (sid) => {
-      const s = students.find(x=>x.id===sid);
-      if(!s) return;
-      const course = courses.find(c=>c.code===s.courseCode);
-      document.getElementById('profileModalName').textContent = s.name;
-      document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name : 'no course'}`;
-
-      const stats = attendanceStatsFor(s);
-      document.getElementById('profileModalStats').innerHTML = `
-        <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${stats.present}</h3><p>Present</p></div></div>
-        <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${stats.absent}</h3><p>Absent</p></div></div>
-        <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${stats.late}</h3><p>Late</p></div></div>
-        <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${stats.pct===null?'—':stats.pct+'%'}</h3><p>Attendance rate</p></div></div>
-      `;
-
-      const courseAtt = attendance[s.courseCode] || {};
-      const attRows = Object.keys(courseAtt).sort().map(date=>{
-        const st = courseAtt[date][s.id];
-        if(!st) return '';
-        return `<tr><td>${date}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
-      }).filter(Boolean).join('');
-      document.getElementById('profileModalAtt').innerHTML = attRows || '<tr><td colspan="2" class="empty-hint">No attendance recorded yet.</td></tr>';
-
-      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
-      const gradeRows = Object.entries(courseGrades).map(([name,v])=>`<tr><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`).join('');
-      document.getElementById('profileModalGrades').innerHTML = gradeRows || '<tr><td colspan="2" class="empty-hint">No grades recorded yet.</td></tr>';
-
-      document.getElementById('profileModal').classList.add('open');
     };
   </script>
 
