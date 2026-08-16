@@ -585,7 +585,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .center-modal { display:none; position:fixed; inset:0; background:rgba(10,16,32,0.85); z-index:99999; align-items:center; justify-content:center; padding:20px; }
 .center-modal.open { display:flex; }
-.center-modal-box { background:#fff; border-radius:14px; max-width:420px; width:100%; padding:36px 32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:popIn 0.25s ease; }
+.center-modal-box { position:relative; background:#fff; border-radius:14px; max-width:420px; width:100%; padding:36px 32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:popIn 0.25s ease; }
 
 /* ── Dashboard shell ── */
 .dash-main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
@@ -745,7 +745,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       </div>
       <div class="table-wrap">
         <table class="grid-table">
-          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th></th></tr></thead>
+          <thead><tr><th></th><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Attendance</th><th style="text-align:right;">Delete</th></tr></thead>
           <tbody id="profileList"></tbody>
         </table>
       </div>
@@ -962,12 +962,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('profileList').innerHTML = rows.map(s=>{
         const stats = attendanceStatsFor(s);
         const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
-        return `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button>
-          <button class="btn btn-danger btn-sm" onclick="removeStudentHere('${s.id}')">Delete</button>
-        </td></tr>`;
-      }).join('') || '<tr><td colspan="6" class="empty-hint">No matching students.</td></tr>';
+        return `<tr>
+        <td><button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button></td>
+        <td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
+        <td style="text-align:right;"><button class="btn btn-danger btn-sm" onclick="removeStudentHere('${s.id}')">Delete</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="empty-hint">No matching students.</td></tr>';
     };
     window.openProfile = (sid) => {
       const s = students.find(x=>x.id===sid);
@@ -976,12 +976,21 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('profileModalName').textContent = s.name;
       document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name : 'no course'}`;
 
+      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
+      const gradeEntries = Object.entries(courseGrades);
+      const totalScore = gradeEntries.reduce((sum, [,v]) => sum + (Number(v.score)||0), 0);
+      const gradeRows = gradeEntries.map(([name,v])=>`<tr><td>${name}</td><td>${v.score}</td></tr>`).join('');
+      document.getElementById('profileModalGrades').innerHTML = gradeEntries.length
+        ? gradeRows + `<tr><td><strong>Total</strong></td><td><strong>${totalScore}</strong></td></tr>`
+        : '<tr><td colspan="2" class="empty-hint">No grades recorded yet.</td></tr>';
+
       const stats = attendanceStatsFor(s);
       document.getElementById('profileModalStats').innerHTML = `
         <div class="stat-card"><div class="stat-icon">✅</div><div><h3>${stats.present}</h3><p>Present</p></div></div>
         <div class="stat-card"><div class="stat-icon">❌</div><div><h3>${stats.absent}</h3><p>Absent</p></div></div>
         <div class="stat-card"><div class="stat-icon">⏰</div><div><h3>${stats.late}</h3><p>Late</p></div></div>
         <div class="stat-card"><div class="stat-icon">📊</div><div><h3>${stats.pct===null?'—':stats.pct+'%'}</h3><p>Attendance rate</p></div></div>
+        <div class="stat-card"><div class="stat-icon">🧮</div><div><h3>${totalScore}</h3><p>Total grade</p></div></div>
       `;
 
       const courseAtt = attendance[s.courseCode] || {};
@@ -991,10 +1000,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         return `<tr><td>${date}</td><td class="status-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</td></tr>`;
       }).filter(Boolean).join('');
       document.getElementById('profileModalAtt').innerHTML = attRows || '<tr><td colspan="2" class="empty-hint">No attendance recorded yet.</td></tr>';
-
-      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
-      const gradeRows = Object.entries(courseGrades).map(([name,v])=>`<tr><td>${name}</td><td>${v.score} / ${v.max}</td></tr>`).join('');
-      document.getElementById('profileModalGrades').innerHTML = gradeRows || '<tr><td colspan="2" class="empty-hint">No grades recorded yet.</td></tr>';
 
       document.getElementById('profileModal').classList.add('open');
     };

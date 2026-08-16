@@ -1025,8 +1025,9 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     }
 
     document.querySelectorAll('.tab-btn').forEach(t=>{
+      if(!t.dataset.tab) return; // skip other pill-button groups, e.g. the enroll mode toggle
       t.onclick = ()=>{
-        document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.tab-btn[data-tab]').forEach(x=>x.classList.remove('active'));
         document.querySelectorAll('.tab-panel').forEach(x=>x.style.display='none');
         t.classList.add('active');
         document.getElementById('tab-'+t.dataset.tab).style.display='block';
