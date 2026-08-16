@@ -849,14 +849,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="field-row">
           <div><label>Course</label><select id="gradeCourse" onchange="renderGrades()"></select></div>
           <div>
-            <label>Add a new assessment column (scored 0–100)</label>
+            <label>Add a new assessment column</label>
             <div style="display:flex; gap:8px;">
               <input id="gradeNewName" placeholder="Quiz 1" style="flex:1;">
               <button class="btn btn-gold btn-sm" onclick="addAssessmentColumn()">+ Add</button>
             </div>
           </div>
         </div>
-        <p style="font-size:0.78em; color:var(--text-muted); margin:-4px 0 14px;">Type scores directly into the grid (0–100) — just like the yellow cells in your Excel gradebook. Total updates automatically.</p>
+        <p style="font-size:0.78em; color:var(--text-muted); margin:-4px 0 14px;">Type scores directly into the grid (each cell 0–100) — just like the yellow cells in your Excel gradebook. Total is the sum of that student's scores and updates automatically.</p>
         <div class="table-wrap">
           <table class="grid-table" id="gradeGridTable">
             <thead><tr id="gradeHeadRow"></tr></thead>
@@ -1266,21 +1266,20 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const assessments = assessmentsFor(code);
       const head = document.getElementById('gradeHeadRow');
       head.innerHTML = '<th class="sticky-col">Student</th>' + assessments.map(a=>
-        `<th>${a} (/100) <button type="button" title="Delete this assessment" onclick="deleteAssessmentColumn('${a.replace(/'/g,"\\'")}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`
-      ).join('') + '<th>Average</th>';
+        `<th>${a} <button type="button" title="Delete this assessment" onclick="deleteAssessmentColumn('${a.replace(/'/g,"\\'")}')" style="border:none;background:none;color:#C62828;cursor:pointer;font-weight:800;padding:0 0 0 4px;">×</button></th>`
+      ).join('') + '<th>Total</th>';
       if(!roster.length || !assessments.length){
         document.getElementById('gradeBody').innerHTML = `<tr><td colspan="${assessments.length+2}" class="empty-hint">${!roster.length?'No students in this course.':'Add an assessment column to start.'}</td></tr>`;
         return;
       }
       document.getElementById('gradeBody').innerHTML = roster.map(s=>{
-        let sum=0, count=0;
+        let sum=0;
         const cells = assessments.map(a=>{
           const entry = (grades[code][s.id] && grades[code][s.id][a]) || { score:0, max:100 };
-          sum += Number(entry.score)||0; count++;
+          sum += Number(entry.score)||0;
           return `<td><input type="number" min="0" max="100" class="gradeCell" data-sid="${s.id}" data-name="${a}" value="${entry.score}" onchange="updateGradeCell(this)" style="width:70px;"></td>`;
         }).join('');
-        const avg = count ? Math.round(sum/count) : 0;
-        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td><strong>${avg} / 100</strong></td></tr>`;
+        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td><strong>${sum}</strong></td></tr>`;
       }).join('');
     };
     window.updateGradeCell = (inp) => {
