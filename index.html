@@ -694,19 +694,17 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <a href="index.html">Home</a>
       <a href="teacher.html">Instructor</a>
       <a href="profiles.html">Profiles</a>
-      <a href="student.html">Student</a>
     </div>
   </nav>
 
   <section>
     <h2>Choose your portal</h2>
-    <div class="grid-2" style="margin-top:20px; grid-template-columns:repeat(3,1fr);">
+    <div class="grid-2" style="margin-top:20px; grid-template-columns:repeat(2,1fr); max-width:760px;">
       <div class="dash-panel portal-card" style="border-left-color:var(--indigo);">
         <div class="portal-icon" style="background:rgba(67,97,238,0.12); color:var(--indigo);">📘</div>
         <h2 class="custom-bullet" style="border:none;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--indigo);margin-inline-end:8px;"></span>Instructor Portal</h2>
         <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
           Create courses, enroll students, record daily attendance, and manage the gradebook.
-          Requires an approved instructor Google account and a GitHub token.
         </p>
         <a href="teacher.html" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Go to Instructor Portal →</a>
       </div>
@@ -714,17 +712,9 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="portal-icon" style="background:rgba(94,227,201,0.18); color:#0f9c82;">🔍</div>
         <h2 class="custom-bullet" style="border:none;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#5ee3c9;margin-inline-end:8px;"></span>Student Profiles</h2>
         <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
-          Search and view any student's full attendance history and grades. Instructor-only.
+          Search and view any student's full attendance history and grades.
         </p>
         <a href="profiles.html" class="btn btn-teal" style="text-decoration:none; display:inline-block;">Go to Profiles →</a>
-      </div>
-      <div class="dash-panel portal-card" style="border-left-color:var(--gold);">
-        <div class="portal-icon" style="background:rgba(242,184,75,0.18); color:#9a6f00;">🎓</div>
-        <h2 class="custom-bullet" style="border:none;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-inline-end:8px;"></span>Student Portal</h2>
-        <p style="color:var(--text-muted); font-size:0.92em; margin-bottom:18px; line-height:1.7;">
-          Sign in with your university Google account to view your own attendance and grades — read-only.
-        </p>
-        <a href="student.html" class="btn btn-gold" style="text-decoration:none; display:inline-block;">Go to Student Portal →</a>
       </div>
     </div>
   </section>

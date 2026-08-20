@@ -674,27 +674,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 <body>
   <div class="auth-topbar">
     <div class="not-signed" id="tbNotSigned">
-      <span>Not signed in</span>
-      <button class="tb-signin-btn" onclick="openSignInPopup()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-        Sign in
-      </button>
+      <span>Not connected</span>
     </div>
     <div class="signed-in" id="tbSignedIn">
-      <img class="avatar" id="tbAvatar" src="" alt="">
-      <span class="tb-name" id="tbName"></span>
       <span class="tb-role badge-role badge-admin">Instructor</span>
-      <button class="tb-signout" onclick="tbSignOut()">Sign out</button>
-    </div>
-  </div>
-
-  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
-    <div class="tb-popup">
-      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
-      <h3>Instructor sign-in</h3>
-      <p>Sign in with your approved Google account, then enter a GitHub token to enable saving.</p>
-      <div id="googleBtn" style="margin:6px 0 4px;"></div>
-      <div class="status-msg err" id="tbStatus"></div>
+      <button class="tb-signout" onclick="tbSignOut()">Disconnect</button>
     </div>
   </div>
 
@@ -716,18 +700,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <a href="index.html">Home</a>
       <a href="teacher.html">Instructor</a>
       <a href="profiles.html">Profiles</a>
-      <a href="student.html">Student</a>
     </div>
   </nav>
 
-  <div class="access-gate" id="gate">
-    <h1>Instructor access required</h1>
-    <p class="sub">Sign in with an approved Google account (top-right) to continue.</p>
-  </div>
-
-  <div class="access-gate hidden" id="tokenGate" style="display:none;">
-    <h1>Write access</h1>
-    <p class="sub">Signed in as <strong id="verifiedEmail"></strong>. Enter a GitHub token (kept only for this session) to enable saving.</p>
+  <div class="access-gate" id="tokenGate">
+    <h1>Instructor access</h1>
+    <p class="sub">Enter a GitHub token (kept only for this session) to load the data.</p>
     <div class="dash-panel" style="text-align:left; max-width:440px; margin:0 auto;">
       <label>GitHub Personal Access Token</label>
       <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
@@ -757,17 +735,6 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     <p>Big Data Department | College of AI | University of Baghdad</p>
   </footer>
 
-  <div id="accessDeniedModal" class="center-modal">
-    <div class="center-modal-box">
-      <div style="font-size:3em;margin-bottom:12px;">&#128683;</div>
-      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">Access Denied</h3>
-      <p style="font-size:0.92em;color:var(--text-muted);margin-bottom:6px;">Your account</p>
-      <p style="font-size:0.95em;font-weight:700;color:#C62828;margin-bottom:16px;word-break:break-all;" id="deniedEmailModal"></p>
-      <p style="font-size:0.88em;color:var(--text-muted);line-height:1.6;margin-bottom:24px;">is not on the approved instructors list.<br>Please contact the <strong style="color:var(--navy);">Club Manager</strong> to request access.</p>
-      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('accessDeniedModal').classList.remove('open')">Close</button>
-    </div>
-  </div>
-
   <div id="profileModal" class="center-modal">
     <div class="center-modal-box" style="max-width:640px; text-align:left;">
       <button class="tb-popup-close" onclick="document.getElementById('profileModal').classList.remove('open')" style="position:absolute; top:14px; right:18px;">&#10005;</button>
@@ -785,33 +752,17 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     </div>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    const GOOGLE_CLIENT_ID = "519113872570-v713c1hm9pvsjdt4ccgrb2pm4vptcmsh.apps.googleusercontent.com";
     const REPO = { owner: 'jalal0019', repo: 'Student_ws', branch: 'main', path: 'data' };
 
     let cfg = { ...REPO, token: '' }, courses = [], students = [], attendance = {}, grades = {};
     let shas = { courses: null, students: null, attendance: null, grades: null };
 
     window.onload = function(){
-      if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-        google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme:'filled_black', shape:'pill', text:'signin_with' });
-      } else {
-        document.getElementById('googleBtn').innerHTML =
-          '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
-      }
-      tryAutoSignIn();
+      tryAutoConnect();
     };
 
-    function parseJwt(token){
-      const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-      return JSON.parse(decodeURIComponent(escape(atob(base64))));
-    }
-
-    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
-    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-    window.tbSignOut = () => { localStorage.removeItem('teacherAuth'); location.reload(); };
+    window.tbSignOut = () => { localStorage.removeItem('teacherToken'); location.reload(); };
 
     async function ghGet(filename){
       const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}/${filename}?ref=${cfg.branch}`;
@@ -843,78 +794,43 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
       const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
     }
-    function showSignedInUI(email, name, picture){
+    function courseKey(c){ return c.semester ? c.code + '::' + c.semester : c.code; }
+    function studentInCourse(s, c){ return s.courseCode === courseKey(c) || s.courseCode === c.code; }
+    function migrateCourseLinks(){
+      courses.forEach(c=>{
+        const legacy = c.code, key = courseKey(c);
+        if(legacy === key) return;
+        students.forEach(s=>{ if(s.courseCode === legacy) s.courseCode = key; });
+        if(attendance[legacy]){
+          attendance[key] = Object.assign(attendance[key] || {}, attendance[legacy]);
+          delete attendance[legacy];
+        }
+        if(grades[legacy]){
+          grades[key] = Object.assign(grades[key] || {}, grades[legacy]);
+          delete grades[legacy];
+        }
+      });
+    }
+
+    function showDashboard(){
       document.getElementById('tbNotSigned').style.display = 'none';
       document.getElementById('tbSignedIn').style.display = 'flex';
-      document.getElementById('tbAvatar').src = picture || '';
-      document.getElementById('tbName').textContent = name || email;
-      document.getElementById('verifiedEmail').textContent = email;
-    }
-    function showDashboard(){
-      document.getElementById('gate').style.display = 'none';
       document.getElementById('tokenGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
+      migrateCourseLinks();
       renderCourseFilter();
       renderProfileList();
     }
 
-    async function tryAutoSignIn(){
-      const raw = localStorage.getItem('teacherAuth');
-      if(!raw) return;
-      let auth;
-      try{ auth = JSON.parse(raw); }catch(e){ localStorage.removeItem('teacherAuth'); return; }
-      cfg = { ...REPO, token: auth.token };
-      showSignedInUI(auth.email, auth.name, auth.picture);
+    async function tryAutoConnect(){
+      const savedToken = localStorage.getItem('teacherToken');
+      if(!savedToken) return;
+      cfg = { ...REPO, token: savedToken };
       try{
         await loadAllData();
         showDashboard();
       }catch(e){
-        localStorage.removeItem('teacherAuth');
-        document.getElementById('tbNotSigned').style.display = 'flex';
-        document.getElementById('tbSignedIn').style.display = 'none';
-      }
-    }
-
-    async function handleGoogleCredential(response){
-      const { owner, repo, branch, path } = REPO;
-      const statusEl = document.getElementById('tbStatus');
-      const payload = parseJwt(response.credential);
-      const email = (payload.email || '').toLowerCase();
-      if(!payload.email_verified){ statusEl.textContent = 'This Google account has an unverified email.'; return; }
-      statusEl.textContent = 'Verifying access...'; statusEl.className = 'status-msg';
-      try{
-        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/instructors.json?t=${Date.now()}`;
-        const res = await fetch(url);
-        if(!res.ok) throw new Error('Could not load instructors.json. Check the repository details.');
-        const instructors = await res.json();
-        const match = instructors.find(i=>(i.email||'').toLowerCase()===email);
-        if(!match){
-          document.getElementById('deniedEmailModal').textContent = email;
-          document.getElementById('accessDeniedModal').classList.add('open');
-          closeSignInPopup();
-          return;
-        }
-        cfg = { owner, repo, branch, path, token: '' };
-        showSignedInUI(email, payload.name, payload.picture);
-        closeSignInPopup();
-
-        const raw = localStorage.getItem('teacherAuth');
-        const saved = raw ? JSON.parse(raw) : null;
-        if(saved && saved.token){
-          cfg.token = saved.token;
-          try{
-            await loadAllData();
-            showDashboard();
-            return;
-          }catch(e){
-            localStorage.removeItem('teacherAuth');
-            cfg.token = '';
-          }
-        }
-        document.getElementById('gate').style.display = 'none';
-        document.getElementById('tokenGate').style.display = 'block';
-      }catch(e){
-        statusEl.textContent = e.message; statusEl.className = 'status-msg err';
+        localStorage.removeItem('teacherToken');
       }
     }
 
@@ -924,12 +840,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       setStatus('connectStatus','Connecting and loading data...');
       try{
         await loadAllData();
-        localStorage.setItem('teacherAuth', JSON.stringify({
-          email: document.getElementById('verifiedEmail').textContent,
-          name: document.getElementById('tbName').textContent,
-          picture: document.getElementById('tbAvatar').src,
-          token: cfg.token
-        }));
+        localStorage.setItem('teacherToken', cfg.token);
         showDashboard();
       }catch(e){ setStatus('connectStatus', e.message, false); }
     };
@@ -937,12 +848,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     // ---------- Student profiles ----------
     function renderCourseFilter(){
       const pcf = document.getElementById('profileCourseFilter'); const cur = pcf.value;
-      pcf.innerHTML = '<option value="">All courses</option>' + courses.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('');
-      if(courses.some(c=>c.code===cur)) pcf.value = cur;
+      pcf.innerHTML = '<option value="">All courses</option>' + courses.map(c=>`<option value="${courseKey(c)}">${c.code} — ${c.name}${c.semester?` (${c.semester})`:''}</option>`).join('');
+      if(courses.some(c=>courseKey(c)===cur)) pcf.value = cur;
     }
     function attendanceStatsFor(s){
       let present=0, absent=0, late=0;
-      const courseAtt = attendance[s.courseCode] || {};
+      const course = courses.find(c=>studentInCourse(s, c));
+      const courseAtt = (course && attendance[courseKey(course)]) || {};
       Object.values(courseAtt).forEach(day=>{
         const st = day[s.id];
         if(!st) return;
@@ -955,16 +867,21 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
       const courseFilter = document.getElementById('profileCourseFilter').value;
       const rows = students.filter(s=>{
-        if(courseFilter && s.courseCode !== courseFilter) return false;
+        if(courseFilter){
+          const course = courses.find(c=>courseKey(c)===courseFilter);
+          if(!course || !studentInCourse(s, course)) return false;
+        }
         if(!q) return true;
         return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
       });
       document.getElementById('profileList').innerHTML = rows.map(s=>{
         const stats = attendanceStatsFor(s);
         const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
+        const course = courses.find(c=>studentInCourse(s, c));
+        const courseLabel = course ? course.code + (course.semester ? ` (${course.semester})` : '') : '—';
         return `<tr>
         <td><button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button></td>
-        <td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${s.courseCode||'—'}</td><td>${pctLabel}</td>
+        <td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${courseLabel}</td><td>${pctLabel}</td>
         <td style="text-align:right;"><button class="btn btn-danger btn-sm" onclick="removeStudentHere('${s.id}')">Delete</button></td>
         </tr>`;
       }).join('') || '<tr><td colspan="7" class="empty-hint">No matching students.</td></tr>';
@@ -972,11 +889,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     window.openProfile = (sid) => {
       const s = students.find(x=>x.id===sid);
       if(!s) return;
-      const course = courses.find(c=>c.code===s.courseCode);
+      const course = courses.find(c=>studentInCourse(s, c));
       document.getElementById('profileModalName').textContent = s.name;
-      document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name : 'no course'}`;
+      document.getElementById('profileModalMeta').textContent = `${s.id} · ${s.email||'no email on file'} · ${course ? course.code+' — '+course.name+(course.semester?' ('+course.semester+')':'') : 'no course'}`;
 
-      const courseGrades = (grades[s.courseCode] && grades[s.courseCode][s.id]) || {};
+      const key = course ? courseKey(course) : null;
+      const courseGrades = (key && grades[key] && grades[key][s.id]) || {};
       const gradeEntries = Object.entries(courseGrades);
       const totalScore = gradeEntries.reduce((sum, [,v]) => sum + (Number(v.score)||0), 0);
       const gradeRows = gradeEntries.map(([name,v])=>`<tr><td>${name}</td><td>${v.score}</td></tr>`).join('');
@@ -993,7 +911,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="stat-card"><div class="stat-icon">🧮</div><div><h3>${totalScore}</h3><p>Total grade</p></div></div>
       `;
 
-      const courseAtt = attendance[s.courseCode] || {};
+      const courseAtt = (key && attendance[key]) || {};
       const attRows = Object.keys(courseAtt).sort().map(date=>{
         const st = courseAtt[date][s.id];
         if(!st) return '';

@@ -675,27 +675,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
   <!-- AUTH TOP BAR -->
   <div class="auth-topbar">
     <div class="not-signed" id="tbNotSigned">
-      <span>Not signed in</span>
-      <button class="tb-signin-btn" onclick="openSignInPopup()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-        Sign in
-      </button>
+      <span>Not connected</span>
     </div>
     <div class="signed-in" id="tbSignedIn">
-      <img class="avatar" id="tbAvatar" src="" alt="">
-      <span class="tb-name" id="tbName"></span>
       <span class="tb-role badge-role badge-admin">Instructor</span>
-      <button class="tb-signout" onclick="tbSignOut()">Sign out</button>
-    </div>
-  </div>
-
-  <div class="tb-popup-overlay" id="tbPopupOverlay" onclick="if(event.target===this)closeSignInPopup()">
-    <div class="tb-popup">
-      <button class="tb-popup-close" onclick="closeSignInPopup()">&#10005;</button>
-      <h3>Instructor sign-in</h3>
-      <p>Sign in with your approved Google account, then enter a GitHub token to enable saving.</p>
-      <div id="googleBtn" style="margin:6px 0 4px;"></div>
-      <div class="status-msg err" id="tbStatus"></div>
+      <button class="tb-signout" onclick="tbSignOut()">Disconnect</button>
     </div>
   </div>
 
@@ -717,20 +701,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       <a href="index.html">Home</a>
       <a href="teacher.html">Instructor</a>
       <a href="profiles.html">Profiles</a>
-      <a href="student.html">Student</a>
     </div>
   </nav>
 
-  <!-- STEP 1: Google sign-in -->
-  <div class="access-gate" id="gate">
-    <h1>Instructor access required</h1>
-    <p class="sub">Sign in with an approved Google account (top-right) to continue.</p>
-  </div>
-
-  <!-- STEP 2: GitHub token -->
-  <div class="access-gate hidden" id="tokenGate" style="display:none;">
-    <h1>Write access</h1>
-    <p class="sub">Signed in as <strong id="verifiedEmail"></strong>. Enter a GitHub token (kept only for this session) to enable saving.</p>
+  <!-- GitHub token gate -->
+  <div class="access-gate" id="tokenGate">
+    <h1>Instructor access</h1>
+    <p class="sub">Enter a GitHub token (kept only for this session) to load and edit the data.</p>
     <div class="dash-panel" style="text-align:left; max-width:440px; margin:0 auto;">
       <label>GitHub Personal Access Token</label>
       <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
@@ -838,7 +815,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
             <tbody id="attBody"></tbody>
           </table>
         </div>
-        <button class="btn btn-primary" style="margin-top:14px;" onclick="saveAttendance()">Save attendance to GitHub</button>
+        <div class="actions" style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="saveAttendance()">Save attendance to GitHub</button>
+          <button class="btn btn-ghost" onclick="exportAttendanceCSV()">Export to Excel (.csv)</button>
+        </div>
         <div class="status-msg" id="attStatus"></div>
       </div>
     </div>
@@ -863,7 +843,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
             <tbody id="gradeBody"></tbody>
           </table>
         </div>
-        <button class="btn btn-primary" style="margin-top:14px;" onclick="saveGrades()">Save grades to GitHub</button>
+        <div class="actions" style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="saveGrades()">Save grades to GitHub</button>
+          <button class="btn btn-ghost" onclick="exportGradesCSV()">Export to Excel (.csv)</button>
+        </div>
         <div class="status-msg" id="gradeStatus"></div>
       </div>
     </div>
@@ -875,47 +858,18 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     <p>Big Data Department | College of AI | University of Baghdad</p>
   </footer>
 
-  <div id="accessDeniedModal" class="center-modal">
-    <div class="center-modal-box">
-      <div style="font-size:3em;margin-bottom:12px;">&#128683;</div>
-      <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3em;font-weight:800;color:var(--navy);margin-bottom:8px;">Access Denied</h3>
-      <p style="font-size:0.92em;color:var(--text-muted);margin-bottom:6px;">Your account</p>
-      <p style="font-size:0.95em;font-weight:700;color:#C62828;margin-bottom:16px;word-break:break-all;" id="deniedEmailModal"></p>
-      <p style="font-size:0.88em;color:var(--text-muted);line-height:1.6;margin-bottom:24px;">is not on the approved instructors list.<br>Please contact the <strong style="color:var(--navy);">Club Manager</strong> to request access.</p>
-      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('accessDeniedModal').classList.remove('open')">Close</button>
-    </div>
-  </div>
-
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    // Put your Google OAuth Client ID here (see README)
-    const GOOGLE_CLIENT_ID = "519113872570-v713c1hm9pvsjdt4ccgrb2pm4vptcmsh.apps.googleusercontent.com";
-
     // Fixed repository location — edit here if the repo ever moves
     const REPO = { owner: 'jalal0019', repo: 'Student_ws', branch: 'main', path: 'data' };
     let cfg = { ...REPO, token: '' }, courses = [], students = [], attendance = {}, grades = {};
     let shas = { courses: null, students: null, attendance: null, grades: null };
 
     window.onload = function(){
-      if(window.google && GOOGLE_CLIENT_ID.indexOf('PUT_YOUR') === -1){
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-        google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme:'filled_black', shape:'pill', text:'signin_with' });
-      } else {
-        document.getElementById('googleBtn').innerHTML =
-          '<div style="color:#C62828;font-size:0.85em;">Google Client ID not configured — see README.md.</div>';
-      }
       document.getElementById('attNewDate').valueAsDate = new Date();
-      tryAutoSignIn();
+      tryAutoConnect();
     };
 
-    function parseJwt(token){
-      const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-      return JSON.parse(decodeURIComponent(escape(atob(base64))));
-    }
-
-    window.openSignInPopup = () => document.getElementById('tbPopupOverlay').classList.add('open');
-    window.closeSignInPopup = () => document.getElementById('tbPopupOverlay').classList.remove('open');
-    window.tbSignOut = () => { localStorage.removeItem('teacherAuth'); location.reload(); };
+    window.tbSignOut = () => { localStorage.removeItem('teacherToken'); location.reload(); };
 
     async function loadAllData(){
       const c = await ghGet('courses.json'); courses = c.data || []; shas.courses = c.sha;
@@ -923,80 +877,25 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const a = await ghGet('attendance.json'); attendance = a.data || {}; shas.attendance = a.sha;
       const g = await ghGet('grades.json'); grades = g.data || {}; shas.grades = g.sha;
     }
-    function showSignedInUI(email, name, picture){
+    function showDashboard(){
       document.getElementById('tbNotSigned').style.display = 'none';
       document.getElementById('tbSignedIn').style.display = 'flex';
-      document.getElementById('tbAvatar').src = picture || '';
-      document.getElementById('tbName').textContent = name || email;
-      document.getElementById('verifiedEmail').textContent = email;
-    }
-    function showDashboard(){
-      document.getElementById('gate').style.display = 'none';
       document.getElementById('tokenGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
+      migrateCourseLinks();
       renderRoster();
     }
 
-    // Fully restore a previous sign-in (email + token) with no click needed
-    async function tryAutoSignIn(){
-      const raw = localStorage.getItem('teacherAuth');
-      if(!raw) return;
-      let auth;
-      try{ auth = JSON.parse(raw); }catch(e){ localStorage.removeItem('teacherAuth'); return; }
-      cfg = { ...REPO, token: auth.token };
-      showSignedInUI(auth.email, auth.name, auth.picture);
+    // Automatically reconnect with a previously saved token, if any
+    async function tryAutoConnect(){
+      const savedToken = localStorage.getItem('teacherToken');
+      if(!savedToken) return;
+      cfg = { ...REPO, token: savedToken };
       try{
         await loadAllData();
         showDashboard();
       }catch(e){
-        // Saved token no longer works — clear it and fall back to manual sign-in
-        localStorage.removeItem('teacherAuth');
-        document.getElementById('tbNotSigned').style.display = 'flex';
-        document.getElementById('tbSignedIn').style.display = 'none';
-      }
-    }
-
-    async function handleGoogleCredential(response){
-      const { owner, repo, branch, path } = REPO;
-      const statusEl = document.getElementById('tbStatus');
-      const payload = parseJwt(response.credential);
-      const email = (payload.email || '').toLowerCase();
-      if(!payload.email_verified){ statusEl.textContent = 'This Google account has an unverified email.'; return; }
-      statusEl.textContent = 'Verifying access...'; statusEl.className = 'status-msg';
-      try{
-        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}/instructors.json?t=${Date.now()}`;
-        const res = await fetch(url);
-        if(!res.ok) throw new Error('Could not load instructors.json. Check the repository details.');
-        const instructors = await res.json();
-        const match = instructors.find(i=>(i.email||'').toLowerCase()===email);
-        if(!match){
-          document.getElementById('deniedEmailModal').textContent = email;
-          document.getElementById('accessDeniedModal').classList.add('open');
-          closeSignInPopup();
-          return;
-        }
-        cfg = { owner, repo, branch, path, token: '' };
-        showSignedInUI(email, payload.name, payload.picture);
-        closeSignInPopup();
-
-        // If a token was saved from a previous session, try it automatically
-        const raw = localStorage.getItem('teacherAuth');
-        const saved = raw ? JSON.parse(raw) : null;
-        if(saved && saved.token){
-          cfg.token = saved.token;
-          try{
-            await loadAllData();
-            showDashboard();
-            return;
-          }catch(e){
-            localStorage.removeItem('teacherAuth');
-            cfg.token = '';
-          }
-        }
-        document.getElementById('gate').style.display = 'none';
-        document.getElementById('tokenGate').style.display = 'block';
-      }catch(e){
-        statusEl.textContent = e.message; statusEl.className = 'status-msg err';
+        localStorage.removeItem('teacherToken');
       }
     }
 
@@ -1041,17 +940,39 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       setStatus('connectStatus','Connecting and loading data...');
       try{
         await loadAllData();
-        localStorage.setItem('teacherAuth', JSON.stringify({
-          email: document.getElementById('verifiedEmail').textContent,
-          name: document.getElementById('tbName').textContent,
-          picture: document.getElementById('tbAvatar').src,
-          token: cfg.token
-        }));
+        localStorage.setItem('teacherToken', cfg.token);
         showDashboard();
       }catch(e){ setStatus('connectStatus', e.message, false); }
     };
 
     let activeSemester = '';
+
+    // A course's real identity is code+semester combined, since the same
+    // code may be reused across different semesters (e.g. AICI201 offered
+    // in both Fall 2026 and Spring 2027 are two different courses).
+    function courseKey(c){ return c.semester ? c.code + '::' + c.semester : c.code; }
+    // Matches a student against a course, accepting both the current
+    // composite key and a plain course code (for data saved before this
+    // fix, when only the code was used as the link).
+    function studentInCourse(s, c){ return s.courseCode === courseKey(c) || s.courseCode === c.code; }
+    // One-time repair: if older data linked students/attendance/grades to a
+    // course using just its code, and that course now has a semester set
+    // (so its real key changed), move that data over to the new key.
+    function migrateCourseLinks(){
+      courses.forEach(c=>{
+        const legacy = c.code, key = courseKey(c);
+        if(legacy === key) return;
+        students.forEach(s=>{ if(s.courseCode === legacy) s.courseCode = key; });
+        if(attendance[legacy]){
+          attendance[key] = Object.assign(attendance[key] || {}, attendance[legacy]);
+          delete attendance[legacy];
+        }
+        if(grades[legacy]){
+          grades[key] = Object.assign(grades[key] || {}, grades[legacy]);
+          delete grades[legacy];
+        }
+      });
+    }
 
     function distinctSemesters(){
       return [...new Set(courses.map(c=>c.semester).filter(Boolean))].sort();
@@ -1068,9 +989,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const f = document.getElementById('semesterFilter').value;
       return f ? courses.filter(c=>c.semester===f) : courses;
     }
+    // Enrollment/attendance/gradebook dropdowns always list every course,
+    // regardless of the semester filter, so a course never silently
+    // disappears mid-entry and gets mismatched with the wrong selection.
     function courseSelectOptions(){
-      const list = filteredCourses();
-      return list.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('') || '<option value="">Add a course first</option>';
+      return courses.map(c=>`<option value="${courseKey(c)}">${c.code} — ${c.name}${c.semester?` (${c.semester})`:''}</option>`).join('') || '<option value="">Add a course first</option>';
     }
     function renderRoster(){
       document.getElementById('statCourses').textContent = courses.length;
@@ -1088,10 +1011,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.semester||'—'}</td><td><button class="btn btn-danger btn-sm" onclick="removeCourse(${i})">Delete</button></td></tr>`;
       }).join('') || '<tr><td colspan="4" class="empty-hint">No courses yet.</td></tr>';
 
+      // These dropdowns always list every course (see courseSelectOptions),
+      // so the selection is only reset if the course itself was deleted.
       ['studentCourse','bulkCourse','attCourse','gradeCourse'].forEach(id=>{
         const el = document.getElementById(id); const cur = el.value;
         el.innerHTML = courseSelectOptions();
-        if(filteredCourses().some(c=>c.code===cur)) el.value = cur;
+        if(courses.some(c=>courseKey(c)===cur)) el.value = cur;
       });
       renderAttendance(); renderGrades();
     }
@@ -1100,7 +1025,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const code = document.getElementById('courseCode').value.trim();
       const name = document.getElementById('courseName').value.trim();
       if(!code || !name){ setStatus('courseStatus','Fill in both fields.', false); return; }
-      if(courses.some(c=>c.code===code)){ setStatus('courseStatus','This code already exists.', false); return; }
+      const candidateKey = courseKey({ code, semester: activeSemester || '' });
+      if(courses.some(c=>courseKey(c)===candidateKey)){
+        setStatus('courseStatus', activeSemester ? `This code already exists in ${activeSemester}.` : 'This code already exists (with no semester set).', false);
+        return;
+      }
       courses.push({code, name, semester: activeSemester || ''});
       document.getElementById('courseCode').value=''; document.getElementById('courseName').value='';
       setStatus('courseStatus','Added locally — click "Save courses to GitHub".', true);
@@ -1145,27 +1074,31 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const raw = document.getElementById('bulkPaste').value;
       if(!courseCode){ setStatus('studentStatus','Choose a course for this batch first.', false); return; }
       if(!raw.trim()){ setStatus('studentStatus','Paste some rows first.', false); return; }
-      const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
-      let added = 0, skipped = 0;
+      // Strip invisible characters Excel/Windows sometimes embeds when
+      // copying (zero-width spaces, bidi/direction marks, BOM).
+      const clean = (s) => s.replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '').trim();
+      const lines = raw.split(/\r\n|\r|\n/).map(l=>l.trim()).filter(Boolean);
+      let added = 0, skipped = 0, reasons = [];
       lines.forEach(line=>{
-        // Accept tab or comma separated: Name, ID, Email
+        // Columns are always Name, ID, Email (in that order) — matching
+        // exactly what's shown above the box. Accepts tab or comma between
+        // columns, since Excel pastes tabs but a manually typed line might
+        // use commas instead.
         const parts = line.split('\t').length > 1 ? line.split('\t') : line.split(',');
-        const cells = parts.map(p=>p.trim()).filter(p=>p!=='');
-        if(cells.length < 2){ skipped++; return; }
-        // Figure out which cell is the ID (all-digits or alnum id-like) vs name
-        let name, id, email='';
-        const idLike = cells.find(c=>/^[A-Za-z0-9\-]+$/.test(c) && /\d/.test(c) && !c.includes('@'));
-        const emailLike = cells.find(c=>c.includes('@'));
-        if(idLike){ id = idLike; name = cells.find(c=>c!==idLike && c!==emailLike) || cells[0]; }
-        else { name = cells[0]; id = cells[1]; }
-        if(emailLike) email = emailLike.toLowerCase();
-        if(!name || !id){ skipped++; return; }
-        if(students.some(s=>s.id===id)){ skipped++; return; }
+        const cells = parts.map(clean);
+        const name = cells[0] || '';
+        const id = cells[1] || '';
+        const email = (cells[2] || '').toLowerCase();
+        if(!name || !id){ skipped++; reasons.push(`"${line}" — missing name or ID`); return; }
+        if(students.some(s=>s.id===id)){ skipped++; reasons.push(`ID ${id} already exists`); return; }
         students.push({ id, name, email, courseCode });
         added++;
       });
       document.getElementById('bulkPaste').value = '';
-      setStatus('studentStatus', `Added ${added} student(s)${skipped?`, skipped ${skipped} row(s)`:''} — click "Save students to GitHub".`, added>0);
+      let msg = `Added ${added} student(s)`;
+      if(skipped) msg += `, skipped ${skipped}: ${reasons.slice(0,3).join('; ')}${reasons.length>3?'…':''}`;
+      msg += added ? ' — click "Save students to GitHub".' : '';
+      setStatus('studentStatus', msg, added>0);
       renderRoster();
     };
 
@@ -1192,7 +1125,8 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     };
     window.renderAttendance = () => {
       const code = document.getElementById('attCourse').value;
-      const roster = students.filter(s=>s.courseCode===code);
+      const course = courses.find(c=>courseKey(c)===code);
+      const roster = course ? students.filter(s=>studentInCourse(s, course)) : [];
       const dates = sessionDatesFor(code);
       const head = document.getElementById('attHeadRow');
       head.innerHTML = '<th class="sticky-col">Student</th>' + dates.map(d=>
@@ -1232,6 +1166,48 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       catch(e){ setStatus('attStatus', e.message, false); }
     };
 
+    // ---------- CSV export (opens directly in Excel) ----------
+    function csvCell(v){
+      const s = String(v ?? '');
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }
+    function downloadCSV(filename, rows){
+      const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    function safeFileName(s){
+      return String(s).replace(/[^a-z0-9\-_. ]+/gi, '_');
+    }
+    window.exportAttendanceCSV = () => {
+      const code = document.getElementById('attCourse').value;
+      const course = courses.find(c=>courseKey(c)===code);
+      if(!course){ setStatus('attStatus','Choose a course first.', false); return; }
+      const roster = students.filter(s=>studentInCourse(s, course));
+      const dates = sessionDatesFor(code);
+      if(!roster.length || !dates.length){ setStatus('attStatus','Nothing to export yet.', false); return; }
+      const header = ['Student ID', 'Student Name', ...dates, 'Present', 'Absent', 'Attendance %'];
+      const rows = [header];
+      roster.forEach(s=>{
+        let present=0, absent=0, late=0;
+        const cells = dates.map(d=>{
+          const st = (attendance[code][d] && attendance[code][d][s.id]) || 'present';
+          if(st==='present') present++; else if(st==='absent') absent++; else late++;
+          return st.charAt(0).toUpperCase()+st.slice(1);
+        });
+        const total = present+absent+late;
+        const pct = total ? Math.round(present*100/total) : 0;
+        rows.push([s.id, s.name, ...cells, present, absent+late, pct+'%']);
+      });
+      const label = course.semester ? `${course.code}_${course.semester}` : course.code;
+      downloadCSV(`Attendance_${safeFileName(label)}.csv`, rows);
+      setStatus('attStatus','Exported.', true);
+    };
+
     // ---------- Gradebook grid ----------
     function assessmentsFor(code){
       const names = new Set();
@@ -1246,7 +1222,8 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       if(!name){ setStatus('gradeStatus','Name the assessment first.', false); return; }
       if(!grades[code]) grades[code] = {};
-      const roster = students.filter(s=>s.courseCode===code);
+      const course = courses.find(c=>courseKey(c)===code);
+      const roster = course ? students.filter(s=>studentInCourse(s, course)) : [];
       roster.forEach(s=>{
         if(!grades[code][s.id]) grades[code][s.id] = {};
         if(!grades[code][s.id][name]) grades[code][s.id][name] = { score: 0, max };
@@ -1263,7 +1240,8 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     };
     window.renderGrades = () => {
       const code = document.getElementById('gradeCourse').value;
-      const roster = students.filter(s=>s.courseCode===code);
+      const course = courses.find(c=>courseKey(c)===code);
+      const roster = course ? students.filter(s=>studentInCourse(s, course)) : [];
       const assessments = assessmentsFor(code);
       const head = document.getElementById('gradeHeadRow');
       head.innerHTML = '<th class="sticky-col">Student</th>' + assessments.map(a=>
@@ -1299,6 +1277,29 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       try{ setStatus('gradeStatus','Saving...'); shas.grades = await ghPut('grades.json', grades, shas.grades, `Update grades ${code}`); setStatus('gradeStatus','Saved.', true); }
       catch(e){ setStatus('gradeStatus', e.message, false); }
+    };
+    window.exportGradesCSV = () => {
+      const code = document.getElementById('gradeCourse').value;
+      const course = courses.find(c=>courseKey(c)===code);
+      if(!course){ setStatus('gradeStatus','Choose a course first.', false); return; }
+      const roster = students.filter(s=>studentInCourse(s, course));
+      const assessments = assessmentsFor(code);
+      if(!roster.length || !assessments.length){ setStatus('gradeStatus','Nothing to export yet.', false); return; }
+      const header = ['Student ID', 'Student Name', ...assessments, 'Total'];
+      const rows = [header];
+      roster.forEach(s=>{
+        let sum = 0;
+        const cells = assessments.map(a=>{
+          const entry = (grades[code][s.id] && grades[code][s.id][a]) || { score:0 };
+          const score = Number(entry.score)||0;
+          sum += score;
+          return score;
+        });
+        rows.push([s.id, s.name, ...cells, sum]);
+      });
+      const label = course.semester ? `${course.code}_${course.semester}` : course.code;
+      downloadCSV(`Grades_${safeFileName(label)}.csv`, rows);
+      setStatus('gradeStatus','Exported.', true);
     };
   </script>
 
