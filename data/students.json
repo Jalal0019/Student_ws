@@ -1,32 +1,3 @@
 [
-  {
-    "id": "20231001",
-    "name": "Example: Ahmed Ali",
-    "email": "ahmed.ali@uobaghdad.edu.iq",
-    "courseCode": "AICI201::Fall 2026"
-  },
-  {
-    "id": "232312321",
-    "name": "ايمن فاضل احمد",
-    "email": "aaa@cc.com",
-    "courseCode": "AICI201::Fall 2026"
-  },
-  {
-    "id": "23123213",
-    "name": "ايمن فاضل احمد2",
-    "email": "advv@cv.com",
-    "courseCode": "AICI201::Fall 2026"
-  },
-  {
-    "id": "3523532",
-    "name": "احمد احمد",
-    "email": "dxcv@dfd.com",
-    "courseCode": "AICI201::Fall 2026"
-  },
-  {
-    "id": "12121212",
-    "name": "احمد احمد",
-    "email": "ahmed@ahemd.com",
-    "courseCode": "AICI201::Spring 2027"
-  }
+  { "id": "20231001", "name": "Example: Ahmed Ali", "email": "ahmed.ali@uobaghdad.edu.iq", "courseCode": "AICI201" }
 ]
