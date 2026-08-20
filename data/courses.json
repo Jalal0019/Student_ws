@@ -1,3 +1,12 @@
 [
-  { "code": "AICI201", "name": "Object-Oriented Programming", "semester": "Fall 2026" }
+  {
+    "code": "AICI201",
+    "name": "Object-Oriented Programming",
+    "semester": "Fall 2026"
+  },
+  {
+    "code": "AICI201",
+    "name": "Object-Oriented Programming",
+    "semester": "Spring 2027"
+  }
 ]
