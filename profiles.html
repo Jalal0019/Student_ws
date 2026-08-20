@@ -879,15 +879,22 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         const pctLabel = stats.pct===null ? '—' : stats.pct+'%';
         const course = courses.find(c=>studentInCourse(s, c));
         const courseLabel = course ? course.code + (course.semester ? ` (${course.semester})` : '') : '—';
+        // A student may have several rows (one per course), so target the
+        // exact enrollment — id alone isn't unique anymore.
+        const rowKey = encodeURIComponent(s.id) + '|' + encodeURIComponent(s.courseCode);
         return `<tr>
-        <td><button class="btn btn-primary btn-sm" onclick="openProfile('${s.id}')">View</button></td>
+        <td><button class="btn btn-primary btn-sm" onclick="openProfile('${rowKey}')">View</button></td>
         <td>${s.id}</td><td>${s.name}</td><td>${s.email||'—'}</td><td>${courseLabel}</td><td>${pctLabel}</td>
-        <td style="text-align:right;"><button class="btn btn-danger btn-sm" onclick="removeStudentHere('${s.id}')">Delete</button></td>
+        <td style="text-align:right;"><button class="btn btn-danger btn-sm" onclick="removeStudentHere('${rowKey}')">Delete</button></td>
         </tr>`;
       }).join('') || '<tr><td colspan="7" class="empty-hint">No matching students.</td></tr>';
     };
-    window.openProfile = (sid) => {
-      const s = students.find(x=>x.id===sid);
+    function findByRowKey(rowKey){
+      const [id, courseCode] = rowKey.split('|').map(decodeURIComponent);
+      return students.find(x=>x.id===id && x.courseCode===courseCode);
+    }
+    window.openProfile = (rowKey) => {
+      const s = findByRowKey(rowKey);
       if(!s) return;
       const course = courses.find(c=>studentInCourse(s, c));
       document.getElementById('profileModalName').textContent = s.name;
@@ -921,15 +928,17 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
 
       document.getElementById('profileModal').classList.add('open');
     };
-    window.removeStudentHere = async (sid) => {
-      const s = students.find(x=>x.id===sid);
+    window.removeStudentHere = async (rowKey) => {
+      const s = findByRowKey(rowKey);
       if(!s) return;
-      if(!confirm(`Delete ${s.name} (${s.id}) from the roster? This cannot be undone.`)) return;
-      const i = students.findIndex(x=>x.id===sid);
+      const course = courses.find(c=>studentInCourse(s, c));
+      const courseLabel = course ? ` from ${course.code}${course.semester?' ('+course.semester+')':''}` : '';
+      if(!confirm(`Delete ${s.name} (${s.id})${courseLabel}? This cannot be undone.`)) return;
+      const i = students.indexOf(s);
       students.splice(i,1);
       renderProfileList();
       try{
-        shas.students = await ghPut('students.json', students, shas.students, `Delete student ${sid}`);
+        shas.students = await ghPut('students.json', students, shas.students, `Delete student ${s.id}`);
       }catch(e){
         alert('Delete failed to save: ' + e.message);
       }

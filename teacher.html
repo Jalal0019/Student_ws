@@ -1047,16 +1047,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const email = document.getElementById('studentEmail').value.trim().toLowerCase();
       const courseCode = document.getElementById('studentCourse').value;
       if(!id || !name || !email || !courseCode){ setStatus('studentStatus','Fill in all fields.', false); return; }
-      if(students.some(s=>s.id===id)){ setStatus('studentStatus','This ID already exists.', false); return; }
-      if(students.some(s=>s.email===email)){ setStatus('studentStatus','This email is already used.', false); return; }
+      // A student ID can appear more than once — the same student may be
+      // enrolled in several courses/semesters. Only block an exact repeat
+      // of the same student in the same course.
+      if(students.some(s=>s.id===id && s.courseCode===courseCode)){ setStatus('studentStatus','This student is already enrolled in this course.', false); return; }
       students.push({id, name, email, courseCode});
       document.getElementById('studentId').value=''; document.getElementById('studentName').value=''; document.getElementById('studentEmail').value='';
       setStatus('studentStatus','Added locally — click "Save students to GitHub".', true);
       renderRoster();
-    };
-    window.removeStudent = (id) => {
-      const i = students.findIndex(s=>s.id===id);
-      if(i>-1){ students.splice(i,1); renderRoster(); }
     };
     window.saveStudents = async () => {
       try{ setStatus('studentStatus','Saving...'); shas.students = await ghPut('students.json', students, shas.students, 'Update students'); setStatus('studentStatus','Saved.', true); }
@@ -1090,7 +1088,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         const id = cells[1] || '';
         const email = (cells[2] || '').toLowerCase();
         if(!name || !id){ skipped++; reasons.push(`"${line}" — missing name or ID`); return; }
-        if(students.some(s=>s.id===id)){ skipped++; reasons.push(`ID ${id} already exists`); return; }
+        if(students.some(s=>s.id===id && s.courseCode===courseCode)){ skipped++; reasons.push(`${id} is already enrolled in this course`); return; }
         students.push({ id, name, email, courseCode });
         added++;
       });

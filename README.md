@@ -57,8 +57,10 @@ URL regardless of what the pages show.
     "Filter everything by semester" dropdown to narrow every course list
     on the page (course table, attendance, gradebook) down to one semester,
     or view all. Enroll students either one at a time, or by **pasting
-    rows copied straight from Excel** (Name, ID, email columns) into the
-    "Paste from Excel" box.
+    rows copied straight from Excel** (Name, ID, email columns, in that
+    exact order) into the "Paste from Excel" box. A student ID can be
+    enrolled in more than one course — the same ID is only blocked if
+    it's already enrolled in that *same* course.
   - **Attendance tab**: a spreadsheet grid like your Excel sheet — one row
     per student, one column per session date. Click a cell to cycle
     Present → Absent → Late; Present/Absent/% totals update automatically.
