@@ -758,7 +758,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           <div class="table-wrap" style="margin-top:16px;">
             <table class="grid-table"><thead><tr><th>Code</th><th>Title</th><th>Semester</th><th></th></tr></thead><tbody id="coursesList"></tbody></table>
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:12px;" onclick="saveCourses()">Save courses to GitHub</button>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn btn-ghost btn-sm" onclick="saveCourses()">Save courses to GitHub</button>
+            <button class="btn btn-danger btn-sm" onclick="resetCourses()">Reset all courses</button>
+          </div>
         </div>
 
         <div class="dash-panel">
@@ -789,6 +792,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           <div class="status-msg" id="studentStatus"></div>
           <div class="actions" style="margin-top:14px;">
             <button class="btn btn-ghost btn-sm" onclick="saveStudents()">Save students to GitHub</button>
+            <button class="btn btn-danger btn-sm" onclick="resetStudents()">Reset all students</button>
             <a href="profiles.html" class="btn btn-gold btn-sm" style="text-decoration:none;">View student profiles →</a>
           </div>
         </div>
@@ -818,6 +822,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="actions" style="margin-top:14px;">
           <button class="btn btn-primary" onclick="saveAttendance()">Save attendance to GitHub</button>
           <button class="btn btn-ghost" onclick="exportAttendanceCSV()">Export to Excel (.csv)</button>
+          <button class="btn btn-danger" onclick="resetAttendance()">Reset all attendance</button>
         </div>
         <div class="status-msg" id="attStatus"></div>
       </div>
@@ -846,6 +851,7 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="actions" style="margin-top:14px;">
           <button class="btn btn-primary" onclick="saveGrades()">Save grades to GitHub</button>
           <button class="btn btn-ghost" onclick="exportGradesCSV()">Export to Excel (.csv)</button>
+          <button class="btn btn-danger" onclick="resetGrades()">Reset all grades</button>
         </div>
         <div class="status-msg" id="gradeStatus"></div>
       </div>
@@ -1040,6 +1046,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       try{ setStatus('courseStatus','Saving...'); shas.courses = await ghPut('courses.json', courses, shas.courses, 'Update courses'); setStatus('courseStatus','Saved.', true); }
       catch(e){ setStatus('courseStatus', e.message, false); }
     };
+    window.resetCourses = async () => {
+      if(!confirm(`Delete ALL ${courses.length} course(s)? This does not delete students, attendance, or grades — but they'll become orphaned. This cannot be undone.`)) return;
+      courses = [];
+      renderRoster();
+      try{ shas.courses = await ghPut('courses.json', courses, shas.courses, 'Reset courses'); setStatus('courseStatus','All courses deleted.', true); }
+      catch(e){ setStatus('courseStatus', e.message, false); }
+    };
 
     window.addStudent = () => {
       const id = document.getElementById('studentId').value.trim();
@@ -1058,6 +1071,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     };
     window.saveStudents = async () => {
       try{ setStatus('studentStatus','Saving...'); shas.students = await ghPut('students.json', students, shas.students, 'Update students'); setStatus('studentStatus','Saved.', true); }
+      catch(e){ setStatus('studentStatus', e.message, false); }
+    };
+    window.resetStudents = async () => {
+      if(!confirm(`Delete ALL ${students.length} student record(s)? This cannot be undone.`)) return;
+      students = [];
+      renderRoster();
+      try{ shas.students = await ghPut('students.json', students, shas.students, 'Reset students'); setStatus('studentStatus','All students deleted.', true); }
       catch(e){ setStatus('studentStatus', e.message, false); }
     };
 
@@ -1137,7 +1157,12 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('attBody').innerHTML = roster.map(s=>{
         let present=0, absent=0, late=0;
         const cells = dates.map(d=>{
-          const st = (attendance[code][d] && attendance[code][d][s.id]) || 'present';
+          if(!attendance[code][d]) attendance[code][d] = {};
+          // Write the "present" default into the actual data the first time
+          // a cell is rendered, not just displayed — otherwise a student
+          // whose cell is never clicked never gets an attendance record.
+          if(!attendance[code][d][s.id]) attendance[code][d][s.id] = 'present';
+          const st = attendance[code][d][s.id];
           if(st==='present') present++; else if(st==='absent') absent++; else late++;
           const cls = 'status-'+st, label = st==='present'?'P':st==='absent'?'A':'L';
           return `<td><button type="button" class="attCell status-${st}" data-sid="${s.id}" data-date="${d}" onclick="cycleAttendance(this)" style="border:none;background:none;font-weight:800;cursor:pointer;width:100%;">${label}</button></td>`;
@@ -1161,6 +1186,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const code = document.getElementById('attCourse').value;
       if(!code){ setStatus('attStatus','Choose a course first.', false); return; }
       try{ setStatus('attStatus','Saving...'); shas.attendance = await ghPut('attendance.json', attendance, shas.attendance, `Update attendance ${code}`); setStatus('attStatus','Saved.', true); }
+      catch(e){ setStatus('attStatus', e.message, false); }
+    };
+    window.resetAttendance = async () => {
+      if(!confirm('Delete ALL attendance records for EVERY course? This cannot be undone.')) return;
+      attendance = {};
+      renderAttendance();
+      try{ shas.attendance = await ghPut('attendance.json', attendance, shas.attendance, 'Reset attendance'); setStatus('attStatus','All attendance deleted.', true); }
       catch(e){ setStatus('attStatus', e.message, false); }
     };
 
@@ -1278,6 +1310,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const code = document.getElementById('gradeCourse').value;
       if(!code){ setStatus('gradeStatus','Choose a course first.', false); return; }
       try{ setStatus('gradeStatus','Saving...'); shas.grades = await ghPut('grades.json', grades, shas.grades, `Update grades ${code}`); setStatus('gradeStatus','Saved.', true); }
+      catch(e){ setStatus('gradeStatus', e.message, false); }
+    };
+    window.resetGrades = async () => {
+      if(!confirm('Delete ALL grades for EVERY course? This cannot be undone.')) return;
+      grades = {};
+      renderGrades();
+      try{ shas.grades = await ghPut('grades.json', grades, shas.grades, 'Reset grades'); setStatus('gradeStatus','All grades deleted.', true); }
       catch(e){ setStatus('gradeStatus', e.message, false); }
     };
     window.exportGradesCSV = () => {
