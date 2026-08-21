@@ -727,6 +727,13 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           <tbody id="profileList"></tbody>
         </table>
       </div>
+      <div class="actions" style="justify-content:space-between; align-items:center; margin-top:12px;">
+        <span class="status-msg" id="profilePageInfo" style="margin:0;"></span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="changeProfilePage(-1)">← Previous</button>
+          <button class="btn btn-ghost btn-sm" onclick="changeProfilePage(1)">Next →</button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -863,10 +870,16 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       const total = present+absent+late;
       return { present, absent, late, total, pct: total ? Math.round(present*100/total) : null };
     }
+    const PROFILE_PAGE_SIZE = 50;
+    let profilePage = 1;
+    window.changeProfilePage = (delta) => { profilePage += delta; renderProfileList(); };
+    document.getElementById('profileSearch').addEventListener('input', ()=>{ profilePage = 1; });
+    document.getElementById('profileCourseFilter').addEventListener('change', ()=>{ profilePage = 1; });
+
     window.renderProfileList = () => {
       const q = (document.getElementById('profileSearch').value || '').trim().toLowerCase();
       const courseFilter = document.getElementById('profileCourseFilter').value;
-      const rows = students.filter(s=>{
+      const allRows = students.filter(s=>{
         if(courseFilter){
           const course = courses.find(c=>courseKey(c)===courseFilter);
           if(!course || !studentInCourse(s, course)) return false;
@@ -874,6 +887,16 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         if(!q) return true;
         return s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q);
       });
+      const totalPages = Math.max(1, Math.ceil(allRows.length / PROFILE_PAGE_SIZE));
+      if(profilePage > totalPages) profilePage = totalPages;
+      if(profilePage < 1) profilePage = 1;
+      const start = (profilePage - 1) * PROFILE_PAGE_SIZE;
+      const rows = allRows.slice(start, start + PROFILE_PAGE_SIZE);
+
+      document.getElementById('profilePageInfo').textContent = allRows.length
+        ? `Showing ${start+1}–${Math.min(start+PROFILE_PAGE_SIZE, allRows.length)} of ${allRows.length} · Page ${profilePage} of ${totalPages}`
+        : 'No matching students.';
+
       document.getElementById('profileList').innerHTML = rows.map(s=>{
         const stats = attendanceStatsFor(s);
         const pctLabel = stats.pct===null ? '—' : stats.pct+'%';

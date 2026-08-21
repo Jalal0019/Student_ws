@@ -1262,7 +1262,11 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
     window.updateGradeCell = (inp) => {
       const code = document.getElementById('gradeCourse').value;
       const sid = inp.dataset.sid, name = inp.dataset.name;
-      if(!grades[code][sid][name]) return;
+      // A student enrolled after this assessment column was created won't
+      // have a slot yet — create it instead of silently failing.
+      if(!grades[code]) grades[code] = {};
+      if(!grades[code][sid]) grades[code][sid] = {};
+      if(!grades[code][sid][name]) grades[code][sid][name] = { score: 0, max: 100 };
       let v = Number(inp.value) || 0;
       if(v < 0) v = 0;
       if(v > 100) v = 100;
