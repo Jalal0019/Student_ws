@@ -758,9 +758,15 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           <div class="table-wrap" style="margin-top:16px;">
             <table class="grid-table"><thead><tr><th>Code</th><th>Title</th><th>Semester</th><th></th></tr></thead><tbody id="coursesList"></tbody></table>
           </div>
+          <div class="actions" style="justify-content:space-between; align-items:center; margin-top:10px;">
+            <span class="status-msg" id="coursePageInfo" style="margin:0;"></span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="changeCoursePage(-1)">← Previous</button>
+              <button class="btn btn-ghost btn-sm" onclick="changeCoursePage(1)">Next →</button>
+            </div>
+          </div>
           <div class="actions" style="margin-top:12px;">
             <button class="btn btn-ghost btn-sm" onclick="saveCourses()">Save courses to GitHub</button>
-            <button class="btn btn-danger btn-sm" onclick="resetCourses()">Reset all courses</button>
           </div>
         </div>
 
@@ -792,9 +798,17 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           <div class="status-msg" id="studentStatus"></div>
           <div class="actions" style="margin-top:14px;">
             <button class="btn btn-ghost btn-sm" onclick="saveStudents()">Save students to GitHub</button>
-            <button class="btn btn-danger btn-sm" onclick="resetStudents()">Reset all students</button>
             <a href="profiles.html" class="btn btn-gold btn-sm" style="text-decoration:none;">View student profiles →</a>
           </div>
+        </div>
+      </div>
+
+      <div class="dash-panel" style="margin-top:32px; border:1.5px solid #C62828; border-left-width:4px;">
+        <h2 style="border:none; color:#C62828;">⚠ Danger zone</h2>
+        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:16px;">These actions permanently delete data and cannot be undone. Use with care.</p>
+        <div class="actions">
+          <button class="btn btn-danger btn-sm" onclick="resetCourses()">Reset all courses</button>
+          <button class="btn btn-danger btn-sm" onclick="resetStudents()">Reset all students</button>
         </div>
       </div>
     </div>
@@ -822,9 +836,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="actions" style="margin-top:14px;">
           <button class="btn btn-primary" onclick="saveAttendance()">Save attendance to GitHub</button>
           <button class="btn btn-ghost" onclick="exportAttendanceCSV()">Export to Excel (.csv)</button>
-          <button class="btn btn-danger" onclick="resetAttendance()">Reset all attendance</button>
         </div>
         <div class="status-msg" id="attStatus"></div>
+      </div>
+
+      <div class="dash-panel" style="margin-top:32px; border:1.5px solid #C62828; border-left-width:4px;">
+        <h2 style="border:none; color:#C62828;">⚠ Danger zone</h2>
+        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:16px;">Permanently deletes attendance for every course and cannot be undone.</p>
+        <button class="btn btn-danger btn-sm" onclick="resetAttendance()">Reset all attendance</button>
       </div>
     </div>
 
@@ -851,9 +870,14 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
         <div class="actions" style="margin-top:14px;">
           <button class="btn btn-primary" onclick="saveGrades()">Save grades to GitHub</button>
           <button class="btn btn-ghost" onclick="exportGradesCSV()">Export to Excel (.csv)</button>
-          <button class="btn btn-danger" onclick="resetGrades()">Reset all grades</button>
         </div>
         <div class="status-msg" id="gradeStatus"></div>
+      </div>
+
+      <div class="dash-panel" style="margin-top:32px; border:1.5px solid #C62828; border-left-width:4px;">
+        <h2 style="border:none; color:#C62828;">⚠ Danger zone</h2>
+        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:16px;">Permanently deletes grades for every course and cannot be undone.</p>
+        <button class="btn btn-danger btn-sm" onclick="resetGrades()">Reset all grades</button>
       </div>
     </div>
 
@@ -990,16 +1014,19 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       document.getElementById('activeSemesterLabel').textContent = val;
       renderRoster();
     };
-    window.onSemesterFilterChange = () => { renderRoster(); };
-    function filteredCourses(){
-      const f = document.getElementById('semesterFilter').value;
-      return f ? courses.filter(c=>c.semester===f) : courses;
-    }
     // Enrollment/attendance/gradebook dropdowns always list every course,
     // regardless of the semester filter, so a course never silently
     // disappears mid-entry and gets mismatched with the wrong selection.
     function courseSelectOptions(){
       return courses.map(c=>`<option value="${courseKey(c)}">${c.code} — ${c.name}${c.semester?` (${c.semester})`:''}</option>`).join('') || '<option value="">Add a course first</option>';
+    }
+    const COURSE_PAGE_SIZE = 10;
+    let coursePage = 1;
+    window.changeCoursePage = (delta) => { coursePage += delta; renderRoster(); };
+    window.onSemesterFilterChange = () => { coursePage = 1; renderRoster(); };
+    function filteredCourses(){
+      const f = document.getElementById('semesterFilter').value;
+      return f ? courses.filter(c=>c.semester===f) : courses;
     }
     function renderRoster(){
       document.getElementById('statCourses').textContent = courses.length;
@@ -1012,7 +1039,18 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
       if(sems.includes(semFilterCur)) semFilter.value = semFilterCur;
       document.getElementById('activeSemesterLabel').textContent = activeSemester || '(none set)';
 
-      document.getElementById('coursesList').innerHTML = filteredCourses().map((c)=>{
+      const allCourses = filteredCourses();
+      const totalPages = Math.max(1, Math.ceil(allCourses.length / COURSE_PAGE_SIZE));
+      if(coursePage > totalPages) coursePage = totalPages;
+      if(coursePage < 1) coursePage = 1;
+      const start = (coursePage - 1) * COURSE_PAGE_SIZE;
+      const pageCourses = allCourses.slice(start, start + COURSE_PAGE_SIZE);
+
+      document.getElementById('coursePageInfo').textContent = allCourses.length
+        ? `Showing ${start+1}–${Math.min(start+COURSE_PAGE_SIZE, allCourses.length)} of ${allCourses.length} · Page ${coursePage} of ${totalPages}`
+        : 'No courses yet.';
+
+      document.getElementById('coursesList').innerHTML = pageCourses.map((c)=>{
         const i = courses.indexOf(c);
         return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.semester||'—'}</td><td><button class="btn btn-danger btn-sm" onclick="removeCourse(${i})">Delete</button></td></tr>`;
       }).join('') || '<tr><td colspan="4" class="empty-hint">No courses yet.</td></tr>';
@@ -1168,8 +1206,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           return `<td><button type="button" class="attCell status-${st}" data-sid="${s.id}" data-date="${d}" onclick="cycleAttendance(this)" style="border:none;background:none;font-weight:800;cursor:pointer;width:100%;">${label}</button></td>`;
         }).join('');
         const total = present+absent+late;
-        const pct = total ? Math.round(present*100/total) : 0;
-        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td>${present}</td><td>${absent+late}</td><td>${pct}%</td></tr>`;
+        // Late counts toward "present" for the attendance rate — it's not
+        // an absence.
+        const pct = total ? Math.round((present+late)*100/total) : 0;
+        return `<tr><td class="sticky-col">${s.name} <small style="color:var(--text-muted)">(${s.id})</small></td>${cells}<td>${present+late}</td><td>${absent}</td><td>${pct}%</td></tr>`;
       }).join('');
     };
     window.cycleAttendance = (btn) => {
@@ -1230,8 +1270,10 @@ table.grid-table select, table.grid-table input { padding:6px 8px; font-size:0.8
           return st.charAt(0).toUpperCase()+st.slice(1);
         });
         const total = present+absent+late;
-        const pct = total ? Math.round(present*100/total) : 0;
-        rows.push([s.id, s.name, ...cells, present, absent+late, pct+'%']);
+        // Late counts toward "present" for the attendance rate — it's not
+        // an absence.
+        const pct = total ? Math.round((present+late)*100/total) : 0;
+        rows.push([s.id, s.name, ...cells, present+late, absent, pct+'%']);
       });
       const label = course.semester ? `${course.code}_${course.semester}` : course.code;
       downloadCSV(`Attendance_${safeFileName(label)}.csv`, rows);
